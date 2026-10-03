@@ -185,3 +185,9 @@ window.dispatchEvent(
 ```
 
 支持 `ao3tm:state`（当前页统计）、`ao3tm:refresh`、`ao3tm:panel`、`ao3tm:reveal`。
+
+## 许可
+
+[GPL-3.0](LICENSE)。你可以自由使用、修改和分发，但衍生作品需要以同样的协议开源。
+
+与 AO3 官方无关；本扩展只在浏览器本地读写规则，不抓取、不上传任何数据。
