@@ -2,7 +2,15 @@
 
 在 AO3（Archive of Our Own）上**记忆并管理标签 / 作者的屏蔽与只看规则**，列表里可以随手快捷屏蔽，规则长期保存在本地。
 
-![列表页效果](test/artifacts/02-tag-blocked.png)
+![列表页：标签屏蔽与统计条](docs/images/list-blocked.png)
+
+| 只看模式 | 右键标签 |
+| --- | --- |
+| ![只看模式](docs/images/only-mode.png) | ![右键标签菜单](docs/images/context-menu.png) |
+
+| 规则设置面板 | 深色自动适配 | 界面汉化 |
+| --- | --- | --- |
+| ![设置面板](docs/images/panel.png) | ![深色模式](docs/images/dark-mode.png) | ![界面汉化](docs/images/i18n.png) |
 
 ---
 
@@ -138,8 +146,9 @@ node test/parse-tags.js   # 标签解析单元测试（不用浏览器），9 �
 - `test/mock/list.html`：仿 AO3 的作品列表 DOM
 - `test/mock/i18n.html`：仿 AO3 筛选区的界面文案 + 用户内容（用于验证"只翻界面"）
 - `test/server.js`：静态服务（默认 8877 端口）
+- `test/shoot-docs.js`：重新生成 README 用的效果图到 `docs/images/`
 - `test/shoot-night.js`：单独拍深色下的截图（供人工核对）
-- 截图与结果输出在 `test/artifacts/`
+- 测试产物（截图、日志、结果）输出到 `test/artifacts/`，该目录不入库
 
 样式、词典与清单也可以单独校验：
 

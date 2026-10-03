@@ -945,7 +945,7 @@ a.ao3tm-tag-only {
 .ao3tm-menu {
   position: absolute;
   z-index: 2147482500;
-  width: 330px;
+  width: 360px;
   max-height: 460px;
   overflow: auto;
   padding: 8px;
@@ -1008,8 +1008,15 @@ a.ao3tm-tag-only {
   padding: 2px 4px;
 }
 
+/* 行内的 屏蔽 / 只看 按钮不能被挤成两行 */
+.ao3tm-menu-row .ao3tm-chip {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 .ao3tm-menu-name {
   flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
