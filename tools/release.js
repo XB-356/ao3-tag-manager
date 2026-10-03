@@ -171,6 +171,14 @@ const NOTES = [
 
   console.log('Release 页面: ' + release.html_url);
 
+  // PATCH release 不会移动已存在的 tag，这里显式把 tag 指向最新提交，
+  // 否则会出现"附件是新的、源码还是旧提交"的错位（踩过一次）。
+  await api(API + '/git/refs/tags/' + TAG, {
+    method: 'PATCH',
+    body: JSON.stringify({ sha: target, force: true })
+  });
+  console.log('tag ' + TAG + ' 已指向 ' + target.slice(0, 7));
+
   if (NOTES_ONLY) {
     console.log('--notes-only：不处理附件');
     return;

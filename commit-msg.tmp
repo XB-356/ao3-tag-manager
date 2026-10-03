@@ -1,0 +1,4 @@
+fix: release.js 显式把 tag 指向最新提交
+
+PATCH release 不会移动已存在的 tag，会出现"附件是新的、源码还停在旧提交"的错位。
+现在建/更新 Release 后统一把 tag 强制指向远端 main 的 HEAD。
