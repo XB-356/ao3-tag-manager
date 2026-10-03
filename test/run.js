@@ -547,11 +547,26 @@ async function main() {
     '只看页反向区列出作者屏蔽规则',
     (await evaluate(`Array.from(document.querySelectorAll('.ao3tm-panel-root [data-act="toggle-mode"]')).map(b => b.getAttribute('data-kind') + ':' + b.getAttribute('data-pattern')).join(',')`)).indexOf('author:writer_alpha') !== -1
   );
-  await evaluate(`document.querySelector('.ao3tm-panel-root [data-act="toggle-mode"][data-kind="author"]').click()`);
-  await sleep(1500);
+  // 面板可能刚好在重渲染，点到的旧节点会静默失效——带重试地点，直到作者真的进了只看列表
+  const clickToggleAuthor = async () => {
+    for (let attempt = 0; attempt < 4; attempt++) {
+      await evaluate(`(() => {
+        // 只看页里的反向区：作者规则此时还挂在"屏蔽"上
+        const btn = document.querySelector('.ao3tm-panel-root [data-act="toggle-mode"][data-kind="author"]');
+        if (btn) btn.click();
+        return !!btn;
+      })()`);
+      await sleep(700);
+      const counts = (await command('ao3tm:state')).counts;
+      if (counts.allowAuthors >= 1 && counts.blockAuthors === 0) return counts;
+    }
+    return (await command('ao3tm:state')).counts;
+  };
+  const authorCounts = await clickToggleAuthor();
+  await sleep(600);
   s = await snapshot();
   // 作者进入只看列表后：103(Fluff) 与 104(writer_alpha) 保留；101 仍在手动屏蔽名单里
-  record('作者加入只看：104 恢复可见', s.visible.indexOf('work_104') !== -1, { visible: s.visible, hidden: s.hidden });
+  record('作者加入只看：104 恢复可见', s.visible.indexOf('work_104') !== -1, { visible: s.visible, hidden: s.hidden, counts: authorCounts });
   const st6 = await command('ao3tm:state');
   record('作者规则已切到只看', st6.counts.allowAuthors === 1 && st6.counts.blockAuthors === 0, st6.counts);
 

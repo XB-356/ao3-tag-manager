@@ -1,21 +1,23 @@
 {
   "manifest_version": 3,
   "name": "AO3 标签管家 - 屏蔽 / 只看",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "default_locale": "zh_CN",
-  "description": "在 AO3 上记忆并管理标签与作者的屏蔽 / 只看规则，支持列表内快捷屏蔽、只看模式与规则导入导出。",
+  "description": "在 AO3（含镜像站）上记忆并管理标签与作者的屏蔽 / 只看规则，支持列表内快捷屏蔽、右键标签屏蔽、只看模式与界面汉化。",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "permissions": ["storage", "contextMenus"],
+  "permissions": ["storage", "contextMenus", "scripting"],
   "host_permissions": [
     "https://archiveofourown.org/*",
     "http://127.0.0.1/*",
-    "http://localhost/*"
+    "http://localhost/*",
+    "file:///*"
   ],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
   "background": {
     "service_worker": "src/background.js",
     "type": "module"
@@ -39,13 +41,17 @@
       "matches": [
         "https://archiveofourown.org/*",
         "http://127.0.0.1/*",
-        "http://localhost/*"
+        "http://localhost/*",
+        "file:///*"
       ],
       "js": [
+        "src/lib/env-core.js",
+        "src/lib/env.js",
         "src/lib/storage.js",
         "src/lib/match.js",
         "src/lib/dom.js",
         "src/lib/i18n.js",
+        "src/lib/mirrors.js",
         "src/lib/panel.js",
         "src/core/filter.js",
         "src/core/ui.js",

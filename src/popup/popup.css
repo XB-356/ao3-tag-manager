@@ -56,6 +56,14 @@ body.ao3tm-popup.is-options {
   color: #999;
 }
 
+#enable-site {
+  margin-top: 8px;
+}
+
+#enable-site[hidden] {
+  display: none;
+}
+
 .ao3tm-popup-body {
   display: flex;
   flex: 1 1 auto;

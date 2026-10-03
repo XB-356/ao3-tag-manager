@@ -15,6 +15,7 @@ const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'u
 const VERSION = manifest.version;
 const TAG = 'v' + VERSION;
 const ZIP = path.join(ROOT, 'dist', 'ao3-tag-manager-v' + VERSION + '.zip');
+const USERSCRIPT = path.join(ROOT, 'dist', 'ao3-tag-manager.user.js');
 const NOTES_ONLY = process.argv.includes('--notes-only');
 
 /** 取 token：环境变量优先，其次 git 凭证助手（Windows 凭证管理器），不写磁盘 */
@@ -37,9 +38,17 @@ if (!TOKEN) {
   console.error('没有可用凭证。请设置 GH_TOKEN，或先用 git 登录过 github.com。');
   process.exit(2);
 }
-if (!NOTES_ONLY && !fs.existsSync(ZIP)) {
-  console.error('找不到安装包：' + path.relative(ROOT, ZIP) + '，请先运行 node tools/pack.js');
-  process.exit(2);
+if (!NOTES_ONLY) {
+  const need = [ZIP, USERSCRIPT].filter(function (file) {
+    return !fs.existsSync(file);
+  });
+  if (need.length) {
+    console.error('缺少产物，请先运行：node tools/pack.js && node tools/build-userscript.js');
+    console.error('缺少：' + need.map(function (file) {
+      return path.relative(ROOT, file);
+    }).join(', '));
+    process.exit(2);
+  }
 }
 
 const API = 'https://api.github.com/repos/' + REPO;
@@ -72,11 +81,18 @@ async function api(url, options) {
 const NOTES = [
   '## AO3 标签管家 v' + VERSION,
   '',
-  '在 AO3 上记忆并管理标签 / 作者的**屏蔽**与**只看**规则，支持列表内快捷屏蔽、右键标签屏蔽、深色自动适配与界面汉化。',
+  '在 AO3（含镜像站）上记忆并管理标签 / 作者的**屏蔽**与**只看**规则，支持列表内快捷屏蔽、右键标签屏蔽、深色自动适配与界面汉化。',
   '',
-  '### 安装',
+  '### 两个安装包怎么选',
   '',
-  '1. 下载下面的 `ao3-tag-manager-v' + VERSION + '.zip` 并**解压**到任意目录（目录别删，扩展会一直从这里读取）',
+  '| 文件 | 适用 |',
+  '| --- | --- |',
+  '| `ao3-tag-manager-v' + VERSION + '.zip` | **电脑浏览器**（Chrome / Edge / Brave 等 Chromium 内核） |',
+  '| `ao3-tag-manager.user.js` | **手机 / 平板**等装不了扩展的浏览器（先装暴力猴 / 篡改猴） |',
+  '',
+  '### 电脑：装扩展',
+  '',
+  '1. 下载 `ao3-tag-manager-v' + VERSION + '.zip` 并**解压**到任意目录（目录别删，扩展会一直从这里读取）',
   '2. 打开 `chrome://extensions/`（Edge 是 `edge://extensions/`）',
   '3. 打开右上角「开发者模式」',
   '4. 点「加载已解压的扩展程序」，选择解压出来的文件夹（能看到 `manifest.json` 那一层）',
@@ -84,9 +100,23 @@ const NOTES = [
   '',
   '> 不要把 zip 直接拖进扩展页，Chrome 需要的是解压后的文件夹。',
   '',
+  '### 手机：装油猴脚本',
+  '',
+  '1. 浏览器里先装 **暴力猴（Violentmonkey）** 或 **篡改猴（Tampermonkey）**',
+  '2. 点开 `ao3-tag-manager.user.js`，脚本管理器会弹出安装界面，确认即可',
+  '3. 打开 AO3 或镜像站即可使用',
+  '4. 想支持新镜像：编辑脚本头部，加一行 `// @match https://你的域名/*`',
+  '',
+  '### 本版新增',
+  '',
+  '- **镜像站支持**：官方站之外可填任意 AO3 镜像域名（也预置了几个常见镜像），启用时只授权该域名，停用即收回',
+  '- **手机 / 平板可用**：新增油猴脚本版，功能与扩展版一致',
+  '- **本地文件**：开启「允许访问文件网址」后，`file://` 打开的本地快照也能用',
+  '- 修复：标签解析不再把相邻标签粘成一条（右键屏蔽只屏蔽你点的那一个）',
+  '',
   '### 说明',
   '',
-  '- 所有规则只存在浏览器本地（`chrome.storage.local`），不联网、不上传',
+  '- 所有规则只存在浏览器本地，不联网、不上传',
   '- 本项目全部由 **DeepSeek V4.1 Flash** 代工',
   '- 截图使用 mock 测试页面的假数据，不代表作者喜好',
   '',
@@ -130,25 +160,46 @@ const NOTES = [
     return;
   }
 
-  const buffer = fs.readFileSync(ZIP);
-  const assetName = 'ao3-tag-manager-v' + VERSION + '.zip';
+  const assets = [
+    { file: ZIP, name: 'ao3-tag-manager-v' + VERSION + '.zip', type: 'application/zip' },
+    { file: USERSCRIPT, name: 'ao3-tag-manager.user.js', type: 'text/javascript' }
+  ];
 
-  // 同名附件先删掉再传，避免 422
-  const existing = (release.assets || []).filter((a) => a.name === assetName);
-  for (const asset of existing) {
-    console.log('删除旧附件: ' + asset.name);
-    await api(API + '/releases/assets/' + asset.id, { method: 'DELETE' });
+  const missing = assets.filter(function (item) {
+    return !fs.existsSync(item.file);
+  });
+  if (missing.length) {
+    console.error('缺少附件，请先构建：' + missing.map(function (item) {
+      return path.relative(ROOT, item.file);
+    }).join(', '));
+    process.exit(2);
   }
 
-  const uploadUrl = 'https://uploads.github.com/repos/' + REPO + '/releases/' + release.id + '/assets?name=' + encodeURIComponent(assetName);
-  const uploaded = await api(uploadUrl, {
-    method: 'POST',
-    headers: Object.assign({}, HEADERS, { 'Content-Type': 'application/zip' }),
-    body: buffer
-  });
+  for (const asset of assets) {
+    const buffer = fs.readFileSync(asset.file);
 
-  console.log('上传完成: ' + uploaded.name + '  (' + Math.round(uploaded.size / 1024) + ' KB)');
-  console.log('下载地址: ' + uploaded.browser_download_url);
+    // 同名附件先删掉再传，避免 422
+    const existing = (release.assets || []).filter(function (item) {
+      return item.name === asset.name;
+    });
+    for (const old of existing) {
+      console.log('删除旧附件: ' + old.name);
+      await api(API + '/releases/assets/' + old.id, { method: 'DELETE' });
+    }
+
+    const uploadUrl = 'https://uploads.github.com/repos/' + REPO + '/releases/' + release.id + '/assets?name=' + encodeURIComponent(asset.name);
+    const uploaded = await api(uploadUrl, {
+      method: 'POST',
+      headers: Object.assign({}, HEADERS, { 'Content-Type': asset.type }),
+      body: buffer
+    });
+    console.log('上传完成: ' + uploaded.name + '  (' + Math.round(uploaded.size / 1024) + ' KB)');
+    console.log('下载地址: ' + uploaded.browser_download_url);
+    release.assets = (release.assets || []).filter(function (item) {
+      return item.name !== asset.name;
+    });
+    release.assets.push(uploaded);
+  }
 })().catch((err) => {
   console.error('发布失败: ' + err.message);
   if (err.body) console.error(JSON.stringify(err.body).slice(0, 500));

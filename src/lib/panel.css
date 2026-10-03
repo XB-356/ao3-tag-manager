@@ -634,6 +634,36 @@ html[data-ao3tm-theme] [data-ao3tm-bilingual] {
   text-decoration: underline;
 }
 
+/* 镜像站列表：域名 + 预置标签 */
+.ao3tm-mirror-host {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11.5px;
+  color: var(--ao3tm-text);
+  cursor: default;
+}
+
+.ao3tm-mirror-host:hover {
+  color: var(--ao3tm-text);
+  text-decoration: none;
+}
+
+.ao3tm-mirror-host small {
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--ao3tm-hover);
+  color: var(--ao3tm-muted);
+  font-family: inherit;
+  font-size: 10px;
+}
+
+.ao3tm-btn-small {
+  padding: 2px 9px;
+  font-size: 11px;
+}
+
 .ao3tm-empty {
   padding: 4px 0;
   color: var(--ao3tm-muted);

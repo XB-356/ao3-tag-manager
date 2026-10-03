@@ -142,18 +142,100 @@
     };
   }
 
+  /* ------------------------------ 存储驱动 ------------------------------
+     扩展内容脚本走 chrome.storage.local；油猴脚本（手机浏览器）没有 chrome API，
+     退回 localStorage。两者都提供 getSync / getAsync / set / onExternalChange。 */
+
+  const env = root.AO3TM && root.AO3TM.env;
+  const chromeApi = env && env.isExtension ? env.chrome : null;
+
+  const localDriver = {
+    name: 'localStorage',
+    getSync: function () {
+      try {
+        const raw = root.localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch (err) {
+        return null;
+      }
+    },
+    getAsync: function (cb) {
+      cb(this.getSync());
+    },
+    set: function (value, cb) {
+      try {
+        root.localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+      } catch (err) {
+        /* 配额或隐私模式，忽略 */
+      }
+      if (cb) cb();
+    },
+    onExternalChange: function () {
+      return function () {};
+    }
+  };
+
+  const chromeDriver = {
+    name: 'chrome.storage',
+    getSync: function () {
+      try {
+        const items = chromeApi.storage.local.get(STORAGE_KEY);
+        return items ? items[STORAGE_KEY] : null;
+      } catch (err) {
+        return null;
+      }
+    },
+    getAsync: function (cb) {
+      try {
+        chromeApi.storage.local.get(STORAGE_KEY, function (items) {
+          if (chromeApi.runtime.lastError) {
+            cb(null);
+            return;
+          }
+          cb(items ? items[STORAGE_KEY] : null);
+        });
+      } catch (err) {
+        cb(null);
+      }
+    },
+    set: function (value, cb) {
+      const payload = {};
+      payload[STORAGE_KEY] = value;
+      try {
+        chromeApi.storage.local.set(payload, function () {
+          void chromeApi.runtime.lastError;
+          if (cb) cb();
+        });
+      } catch (err) {
+        if (cb) cb();
+      }
+    },
+    onExternalChange: function (handler) {
+      try {
+        chromeApi.storage.onChanged.addListener(function (changes, area) {
+          if (area !== 'local' || !changes[STORAGE_KEY]) return;
+          handler();
+        });
+      } catch (err) {
+        /* ignore */
+      }
+      return function () {};
+    }
+  };
+
+  const driver = chromeApi ? chromeDriver : localDriver;
+
   function get() {
     if (cache) return cache;
     return loadSync();
   }
 
   function loadSync() {
-    // storage.local.get() 在内容脚本里可以同步取值；万一环境不支持，退回默认状态，
+    // chrome.storage.local.get() 在内容脚本里可以同步取值；万一环境不支持，退回默认状态，
     // 之后 ready() 的异步读取会把真实数据补上（见 shouldAdopt）。
     let raw = null;
     try {
-      const items = chrome.storage.local.get(STORAGE_KEY);
-      raw = items ? items[STORAGE_KEY] : null;
+      raw = driver.getSync();
     } catch (err) {
       raw = null;
     }
@@ -190,13 +272,8 @@
     if (loading) return loading;
     loading = new Promise(function (resolve) {
       try {
-        chrome.storage.local.get(STORAGE_KEY, function (items) {
-          if (chrome.runtime.lastError) {
-            cache = cache || normalize(null);
-            resolve(cache);
-            return;
-          }
-          resolve(applyIncoming(items && items[STORAGE_KEY]));
+        driver.getAsync(function (raw) {
+          resolve(applyIncoming(raw));
         });
       } catch (err) {
         cache = cache || normalize(null);
@@ -208,9 +285,8 @@
 
   function read() {
     try {
-      chrome.storage.local.get(STORAGE_KEY, function (items) {
-        if (chrome.runtime.lastError) return;
-        applyIncoming(items && items[STORAGE_KEY]);
+      driver.getAsync(function (raw) {
+        applyIncoming(raw);
         notify('remote');
       });
     } catch (err) {
@@ -222,17 +298,10 @@
   function persist() {
     if (!cache) return;
     pending = true;
-    const payload = {};
-    payload[STORAGE_KEY] = clone(cache);
     lastWritten = fingerprint(cache);
-    try {
-      chrome.storage.local.set(payload, function () {
-        pending = false;
-        void chrome.runtime.lastError;
-      });
-    } catch (err) {
+    driver.set(clone(cache), function () {
       pending = false;
-    }
+    });
   }
 
   function notify(source) {
@@ -553,6 +622,7 @@
   root.AO3TM = root.AO3TM || {};
   root.AO3TM.store = {
     STORAGE_KEY: STORAGE_KEY,
+    driverName: driver.name,
     DEFAULT_SETTINGS: DEFAULT_SETTINGS,
     DEFAULT_STATE: DEFAULT_STATE,
     AUTHOR_LABEL_SUFFIX: AUTHOR_LABEL_SUFFIX,

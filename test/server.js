@@ -23,8 +23,9 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(PORT, '127.0.0.1', () => {
-  console.log('mock server on http://127.0.0.1:' + PORT);
+// 绑定所有网卡：测试镜像域名时浏览器用 Host 头伪装成镜像站来访问
+server.listen(PORT, '0.0.0.0', () => {
+  console.log('mock server on http://127.0.0.1:' + PORT + ' （同时接受任意 Host 头，便于模拟镜像站）');
 });
 
 server.on('error', (err) => {

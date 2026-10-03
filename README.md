@@ -34,10 +34,13 @@
 | **深色自动适配** | 不靠猜皮肤类名，直接量页面实际背景亮度，官方夜间皮肤 / 系统深色 / 第三方自制皮肤都能适配；也可强制浅色或深色 |
 | **界面汉化** | 一键把 AO3 的界面文案翻成中文（导航、按钮、筛选、统计标签、分级/警告选项…），正文、摘要、标签、用户名、评论一律不动；可开「悬停显示原文」 |
 | **导入导出** | 规则导出为 JSON，可换设备导入（导入为覆盖式，方便两台机器保持一致） |
+| **镜像站支持** | 官方站之外，可在设置里填任意 AO3 镜像域名（也预置了几个常见镜像）；点「启用」时浏览器只让你授权该域名，停用即收回授权。以 http 访问的镜像也能注入 |
+| **本地文件** | 开启「允许访问文件网址」后，用 `file://` 打开的本地快照页面同样可以试用 |
+| **手机 / 平板** | 另有油猴脚本版（`ao3-tag-manager.user.js`），给不支持 Chrome 扩展的浏览器用（如夸克、Kiwi、Edge 手机版装暴力猴/篡改猴） |
 
 ## 安装
 
-### 方式一：下载发布包（推荐）
+### 方式一：电脑浏览器装扩展（推荐）
 
 1. 打开 [Releases](https://github.com/XB-356/ao3-tag-manager/releases/latest)，下载 `ao3-tag-manager-v*.zip`
 2. **解压**到任意目录（这个目录别删，扩展会一直从这儿读取）
@@ -47,20 +50,35 @@
 
 > 不要把 zip 直接拖进扩展页，Chrome 需要的是解压后的文件夹。
 
-### 方式二：从源码加载
+### 方式二：手机 / 平板装油猴脚本
+
+手机版夸克、Kiwi、Edge 等**不支持 Chrome 扩展**，改用油猴脚本：
+
+1. 浏览器里先装一个脚本管理器：**暴力猴（Violentmonkey）** 或 **篡改猴（Tampermonkey）**
+2. 打开 [Releases](https://github.com/XB-356/ao3-tag-manager/releases/latest) 里的 `ao3-tag-manager.user.js`
+3. 脚本管理器会弹出安装界面，确认即可
+4. 打开 AO3（或镜像站）就能看到统计条与悬浮按钮
+
+油猴版和扩展版功能一致，差别只有两点：
+
+- **没有镜像站授权弹窗**：想支持新镜像，在脚本管理器里编辑脚本头部，加一行 `// @match https://你的域名/*`
+- 规则存在浏览器的 `localStorage` 里（扩展版存在 `chrome.storage.local`）
+
+### 方式三：从源码加载
 
 ```bash
 git clone https://github.com/XB-356/ao3-tag-manager.git
 ```
 
-然后按上面第 3–5 步，加载这个仓库目录即可。
+然后按方式一第 3–5 步，加载这个仓库目录即可。
 
 > Edge / Brave 等 Chromium 内核浏览器同理（`edge://extensions/`）。
 
 ### 自己打包
 
 ```bash
-node tools/pack.js        # 生成 dist/ao3-tag-manager-v<版本>.zip
+node tools/pack.js             # 生成 dist/ao3-tag-manager-v<版本>.zip（扩展安装包）
+node tools/build-userscript.js # 生成 dist/ao3-tag-manager.user.js（油猴脚本）
 ```
 
 ## 使用
@@ -157,9 +175,16 @@ node tools/pack.js        # 生成 dist/ao3-tag-manager-v<版本>.zip
 
 ```bash
 # 需要本机已安装 Chrome（可用环境变量 CHROME 指定路径）
-node test/run.js          # 主流程：屏蔽/只看/面板/右键/弹窗/规则编辑，57 项
-node test/theme-i18n.js   # 深色适配 + 界面汉化，12 项
-node test/parse-tags.js   # 标签解析单元测试（不用浏览器），9 项
+node test/run.js              # 主流程：屏蔽/只看/面板/右键/弹窗/规则编辑，57 项
+node test/theme-i18n.js       # 深色适配 + 界面汉化，12 项
+node test/parse-tags.js       # 标签解析单元测试（不用浏览器），9 项
+node test/mirror-userscript.js # 镜像域名 / 动态注册 / file:// / 油猴版，22 项
+```
+
+后三个套件里的镜像与油猴测试需要先起 mock 服务：
+
+```bash
+node test/server.js   # 默认 8877 端口，另开一个终端跑
 ```
 
 - `test/mock/list.html`：仿 AO3 的作品列表 DOM
@@ -185,10 +210,15 @@ manifest 里保留了 `http://127.0.0.1/*`、`http://localhost/*` 两条匹配�
 manifest.json          扩展清单（MV3）
 icons/                 图标
 _locales/zh_CN/        本地化名称
-src/lib/storage.js     规则存储、迁移、导入导出
+src/lib/env-core.js    宿主观测与域名判定（扩展 / 油猴 / service worker 共用）
+src/lib/env.js         页面侧环境适配（取用 env-core 的结果）
+src/lib/env.mjs        service worker 侧的模块包装（MV3 禁止动态 import）
+src/lib/storage.js     规则存储、迁移、导入导出（chrome.storage / localStorage 双驱动）
 src/lib/match.js       匹配引擎（子串 / 全等 / 模糊 / 正则 / 只看判定）
 src/lib/dom.js         AO3 页面结构解析（卡片、标签、作者、作品页）
 src/lib/i18n.js        界面汉化词典与翻译引擎（只翻界面文案）
+src/lib/mirrors.js     镜像站：权限申请与内容脚本动态注册
+src/lib/mirrors.mjs    service worker 侧的模块包装
 src/lib/panel.js       规则设置面板（站内浮层与弹窗共用）
 src/lib/panel.css      面板与页内注入元素样式
 src/core/filter.js     过滤执行（屏蔽 / 只看 / 同系列 / 临时显示）
@@ -196,11 +226,13 @@ src/core/ui.js         页内注入（统计条、快捷按钮、标签按钮、
 src/core/focus.js      快捷键与临时聚焦
 src/core/content.js    消息响应 + 页面事件桥
 src/core/main.js       入口与 Turbo 页面切换
-src/background.js      右键菜单快捷屏蔽
+src/background.js      右键菜单 + 镜像注册
 src/popup/             扩展弹窗 / 设置页
-test/                  本地测试（端到端 + 解析单测 + 文档截图）
+test/                  本地测试（端到端 + 解析单测 + 镜像/油猴 + 文档截图）
 tools/pack.js          打包成可安装的 zip
-tools/release.js       创建 GitHub Release 并上传 zip
+tools/build-userscript.js  构建油猴脚本版
+tools/bundle.js        两种打包共用的源码拼接（处理 ESM 与普通脚本的双重身份）
+tools/release.js       创建 GitHub Release 并上传安装包
 ```
 
 ## 发布
@@ -209,13 +241,14 @@ tools/release.js       创建 GitHub Release 并上传 zip
 
 ```bash
 # 1. 升版本号（manifest.json 里的 version）
-# 2. 打包
+# 2. 打包（zip 与油猴脚本都会生成，release.js 会自动一并上传）
 node tools/pack.js
+node tools/build-userscript.js
 # 3. 建 Release 并上传（凭证取自 GH_TOKEN，或 git 已登录的凭证助手）
 node tools/release.js
 ```
 
-`release.js` 会根据版本号自动生成 tag（如 `v1.0.0`）、写入发布说明、并在附件同名时先删后传。
+`release.js` 会根据版本号自动生成 tag（如 `v1.1.0`）、写入发布说明、并在附件同名时先删后传。
 
 ### 页面事件桥（给书签小工具用）
 

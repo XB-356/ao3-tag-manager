@@ -96,6 +96,20 @@
       render();
     } else if (act === 'add-rule') {
       addFromInputs();
+    } else if (act === 'mirror-add') {
+      addMirrorFromInput();
+    } else if (act === 'mirror-enable') {
+      const host = target.getAttribute('data-host');
+      const mod = mirrorModule();
+      if (mod && host) {
+        mod.enableFromPage(host).then(function (result) {
+          if (root.AO3TM.ui) root.AO3TM.ui.toast(mirrorStatusText(result));
+          mirrorRows = null;
+          loadMirrors();
+        });
+      }
+    } else if (act === 'mirror-disable') {
+      removeMirror(target.getAttribute('data-host'));
     } else if (act === 'save-textarea') {
       saveTextarea(target);
     } else if (act === 'export') {
@@ -197,6 +211,7 @@
     else if (activeTab === 'only') body.innerHTML = renderRulesTab(state, 'allow');
     else if (activeTab === 'works') body.innerHTML = renderWorksTab(state);
     else body.innerHTML = renderSettingsTab(state);
+    if (activeTab === 'settings' && mirrorRows === null) loadMirrors();
 
     panelEl.querySelector('.ao3tm-panel-foot').innerHTML =
       '<div class="ao3tm-foot-stat">标签规则 ' +
@@ -318,8 +333,7 @@
   /**
    * 规则编辑弹窗：把一条规则改名，或把误粘成一条的多个标签拆开。
    * 用顿号 / 竖线 / 换行分割即可，保存后逐条写入。
-   */
-  function openRuleEditor(kind, pattern, mode) {
+   */  function openRuleEditor(kind, pattern, mode) {
     const existing = panelEl.querySelector('.ao3tm-rule-editor');
     if (existing) existing.remove();
     const box = document.createElement('div');
@@ -490,6 +504,130 @@
     );
   }
 
+  /* -------------------------------- 镜像站 -------------------------------- */
+
+  /** 镜像站列表（设置页渲染时异步拉取） */
+  let mirrorRows = null;
+  let mirrorCurrentHost = '';
+
+  function mirrorModule() {
+    return root.AO3TM.mirrors || null;
+  }
+
+  function loadMirrors() {
+    const mod = mirrorModule();
+    if (!mod || !mod.overview) return;
+    mirrorCurrentHost = location.hostname || '';
+    mod
+      .overview()
+      .then(function (rows) {
+        mirrorRows = rows || [];
+        if (activeTab === 'settings' && panelEl) render();
+      })
+      .catch(function () {
+        mirrorRows = [];
+      });
+  }
+
+  function renderMirrorsBlock() {
+    const mod = mirrorModule();
+    if (!mod) {
+      // 油猴脚本版没有 chrome.permissions，域名写死在脚本头里
+      return (
+        '<div class="ao3tm-subsection"><div class="ao3tm-subtitle">镜像站</div>' +
+        '<div class="ao3tm-hint">当前是油猴脚本版：镜像域名写在脚本头的 <code>@match</code> 里。' +
+        '需要新增镜像时，编辑脚本头部加一行 <code>@match https://你的域名/*</code> 即可。</div>' +
+        '</div>'
+      );
+    }
+    const rows = mirrorRows;
+    const body =
+      rows === null
+        ? '<div class="ao3tm-empty">正在读取已启用的域名…</div>'
+        : rows.length
+          ? '<div class="ao3tm-list">' +
+            rows
+              .map(function (row) {
+                return (
+                  '<div class="ao3tm-list-row">' +
+                  '<span class="ao3tm-list-link ao3tm-mirror-host">' +
+                  esc(row.host) +
+                  (row.preset ? '<small>预置</small>' : '') +
+                  '</span>' +
+                  '<button type="button" class="ao3tm-btn ao3tm-btn-small' +
+                  (row.enabled ? ' ao3tm-btn-ghost' : '') +
+                  '" data-act="' +
+                  (row.enabled ? 'mirror-disable' : 'mirror-enable') +
+                  '" data-host="' +
+                  esc(row.host) +
+                  '">' +
+                  (row.enabled ? '停用' : '启用') +
+                  '</button></div>'
+                );
+              })
+              .join('') +
+            '</div>'
+          : '<div class="ao3tm-empty">还没有启用任何镜像站</div>';
+
+    return (
+      '<div class="ao3tm-subsection"><div class="ao3tm-subtitle">镜像站</div>' +
+      '<div class="ao3tm-add-row">' +
+      '<input type="text" class="ao3tm-input" data-mirror-input="1" placeholder="镜像域名，例如 ao3.example.com" />' +
+      '<button type="button" class="ao3tm-btn" data-act="mirror-add">启用</button>' +
+      '</div>' +
+      '<div class="ao3tm-hint">填域名即可（不用带 https://）。启用时浏览器会弹出授权，只授权你填的那个域名；停用会同时收回授权。</div>' +
+      body +
+      '</div>'
+    );
+  }
+  function mirrorStatusText(result) {
+    if (!result) return '操作失败';
+    if (result.ok) return '已启用镜像：' + result.host;
+    if (result.reason === 'static') return '这是官方站或本地地址，无需启用';
+    if (result.reason === 'invalid') return '域名格式不对，示例：ao3.example.com';
+    if (result.reason === 'denied') return '你取消了授权，未启用';
+    if (result.reason === 'userscript') return '油猴版请把域名加进脚本头的 @match';
+    return '启用失败：' + (result.reason || '未知原因');
+  }
+
+  function addMirrorFromInput() {
+    const mod = mirrorModule();
+    if (!mod || !panelEl) return;
+    const input = panelEl.querySelector('input[data-mirror-input]');
+    const host = root.AO3TM.env ? root.AO3TM.env.normalizeHost(input ? input.value : '') : '';
+    if (!host) {
+      if (root.AO3TM.ui) root.AO3TM.ui.toast('域名格式不对，示例：ao3.example.com');
+      return;
+    }
+    // 注意：权限申请必须在用户手势里发起，所以这里直接调，不要放进 await 之后的回调
+    mod
+      .enableFromPage(host)
+      .then(function (result) {
+        if (input) input.value = '';
+        if (root.AO3TM.ui) root.AO3TM.ui.toast(mirrorStatusText(result));
+        mirrorRows = null;
+        loadMirrors();
+      })
+      .catch(function (err) {
+        if (root.AO3TM.ui) root.AO3TM.ui.toast('启用失败：' + (err && err.message ? err.message : err));
+      });
+  }
+
+  function removeMirror(host) {
+    const mod = mirrorModule();
+    if (!mod) return;
+    mod
+      .disable(host)
+      .then(function () {
+        if (root.AO3TM.ui) root.AO3TM.ui.toast('已停用镜像：' + host);
+        mirrorRows = null;
+        loadMirrors();
+      })
+      .catch(function () {
+        if (root.AO3TM.ui) root.AO3TM.ui.toast('停用失败');
+      });
+  }
+
   function renderSettingsTab(state) {
     const s = state.settings;
     const toggle = function (key, label, hint) {
@@ -541,6 +679,7 @@
       toggle('i18nBilingual', '悬停显示原文', '汉化后的元素鼠标悬停会显示英文原句') +
       '<div class="ao3tm-hint">切换开关后当前页面立即生效；已汉化的文案刷新页面会恢复英文。词典在 <code>src/lib/i18n.js</code>，可以自己加词条。</div>' +
       '</div>' +
+      renderMirrorsBlock() +
       '<div class="ao3tm-subsection"><div class="ao3tm-subtitle">数据</div>' +
       '<div class="ao3tm-add-row">' +
       '<button type="button" class="ao3tm-btn ao3tm-btn-ghost" data-act="export">' +

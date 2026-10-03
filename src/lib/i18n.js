@@ -303,6 +303,7 @@
   }
 
   function lookup(text) {
+    if (typeof text !== 'string') return null;
     const key = text.replace(/\s+/g, ' ').trim();
     if (!key) return null;
     if (Object.prototype.hasOwnProperty.call(PHRASES, key)) return PHRASES[key];

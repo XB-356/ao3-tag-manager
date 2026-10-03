@@ -53,6 +53,30 @@
       sendResponse(root.AO3TM.ui.applyContextAction(message.action));
       return true;
     }
+    // 测试用：权限弹窗没法在无头环境点掉，转发给 service worker 走真实注册链路
+    if (message.mirrorEnableForTest || message.mirrorDisableForTest) {
+      const api = root.AO3TM.env.chrome;
+      const host = message.mirrorEnableForTest || message.mirrorDisableForTest;
+      const type = message.mirrorEnableForTest ? 'ao3tm:mirror-enable-for-test' : 'ao3tm:mirror-disable-for-test';
+      api.runtime.sendMessage({ type: type, host: host }, function (result) {
+        void api.runtime.lastError;
+        root.AO3TM.mirrors.listEnabled().then(function (enabled) {
+          sendResponse({ ok: true, mirrorResult: result, enabled: enabled });
+        });
+      });
+      return true;
+    }
+
+    // 测试用：查询动态注册的实际 matches（内容脚本读不到，转发给 service worker）
+    if (message.mirrorRegistered) {
+      const api = root.AO3TM.env.chrome;
+      api.runtime.sendMessage({ type: 'ao3tm:mirror-debug' }, function (result) {
+        void api.runtime.lastError;
+        sendResponse(result);
+      });
+      return true;
+    }
+
     if (message.type === 'ao3tm:debug') {
       // 给自动化测试/排查用：先按当前设置应用一次主题与汉化，再返回状态
       const D = root.AO3TM.dom;
@@ -83,10 +107,38 @@
         },
         revision: state.revision,
         counts: store.counts(),
+        env: root.AO3TM.env
+          ? {
+              mode: root.AO3TM.env.mode,
+              driver: store.driverName,
+              host: location.hostname,
+              protocol: location.protocol,
+              isAo3: root.AO3TM.env.isAo3Host(location.hostname),
+              presets: root.AO3TM.env.PRESET_MIRRORS,
+              probes: message.probes || null
+            }
+          : null,
+        probe: message.probe
+          ? (function () {
+              const env = root.AO3TM.env;
+              const out = {};
+              (message.probeHosts || []).forEach(function (host) {
+                out[host] = env.isAo3Host(host);
+              });
+              return {
+                hosts: out,
+                normalized: (message.probeRaw || []).map(function (value) {
+                  return env.normalizeHost(value);
+                }),
+                pattern: env.hostToMatchPattern('ao3.example.com'),
+                customHosts: env.readCustomHosts()
+              };
+            })()
+          : null,
         settings: state.settings,
         theme: document.documentElement.getAttribute('data-ao3tm-theme'),
         translated: document.querySelectorAll('[data-ao3tm-i18n]').length,
-        translate: root.AO3TM.i18n ? root.AO3TM.i18n.translate(message.probe || 'Sort and Filter') : null,
+        translate: root.AO3TM.i18n && typeof message.probe === 'string' ? root.AO3TM.i18n.translate(message.probe) : null,
         contextHit: root.AO3TM.ui ? root.AO3TM.ui.lastContextHit() : null,
         contextMenu: (function () {
           const menu = document.querySelector('.ao3tm-menu');
