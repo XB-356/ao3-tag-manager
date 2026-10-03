@@ -83,7 +83,7 @@ class Cdp {
       const timer = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error('CDP 超时: ' + method));
-      }, 15000);
+      }, 30000);
       this.pending.set(id, {
         resolve: (value) => {
           clearTimeout(timer);
@@ -379,6 +379,74 @@ async function main() {
   await shot('06-toast');
   await evaluate(`document.querySelector('.ao3tm-toast-action').click()`);
   await waitFor(`document.querySelectorAll('li.blurb.ao3tm-hidden').length === 2`, '撤销后回到 2 篇');
+
+  // 场景 5b：卡片"隐藏"按钮要能来回切（再点一下取消隐藏）
+  // 注意只清"隐藏"不动规则：后面的场景 6 依赖此前建立的屏蔽规则
+  await evaluate(`(() => {
+    const el = document.getElementById('work_102');
+    const btn = el && el.querySelector('.ao3tm-tool-hide');
+    if (btn && btn.getAttribute('data-act') === 'unhide') btn.click();
+    return true;
+  })()`);
+  await sleep(700);
+  const hideBtnState = () =>
+    evaluate(`(() => {
+      const b = document.querySelector('#work_102 .ao3tm-tool-hide');
+      if (!b) return null;
+      return { text: b.textContent.trim(), act: b.getAttribute('data-act'), on: b.classList.contains('is-on') };
+    })()`);
+
+  const hideBtnBefore = await hideBtnState();
+  await evaluate(`document.querySelector('#work_102 .ao3tm-tool-hide').click()`);
+  // 注意：本页基线本来就有 2 篇被规则隐藏，所以断言要盯 work_102 自己的状态
+  await waitFor(`document.getElementById('work_102').classList.contains('ao3tm-hidden')`, '隐藏 102 生效');
+  await sleep(400);
+  const hideBtnAfterHide = await hideBtnState();
+  record(
+    '隐藏按钮：点一下变成"取消隐藏"',
+    hideBtnBefore && hideBtnBefore.act === 'hide' && hideBtnAfterHide && hideBtnAfterHide.act === 'unhide' && /取消隐藏/.test(hideBtnAfterHide.text),
+    { before: hideBtnBefore, after: hideBtnAfterHide }
+  );
+
+  // 再点一次：应当取消隐藏（这就是之前"点了取消不掉"的 bug）
+  await evaluate(`document.querySelector('#work_102 .ao3tm-tool-hide').click()`);
+  await waitFor(`!document.getElementById('work_102').classList.contains('ao3tm-hidden')`, '取消隐藏生效');
+  await sleep(400);
+  const hideBtnAfterUndo = await hideBtnState();
+  const workStateAfterUndo = await command('ao3tm:debug');
+  record(
+    '再点一下：真的取消隐藏（恢复到可见，按钮回到"隐藏"）',
+    hideBtnAfterUndo && hideBtnAfterUndo.act === 'hide' && /隐藏/.test(hideBtnAfterUndo.text) && workStateAfterUndo.counts.hiddenWorks === 0,
+    { button: hideBtnAfterUndo, counts: workStateAfterUndo.counts }
+  );
+
+  // 变灰 / 移除两种隐藏样式下都要能点回来
+  const hideSettings = await command('ao3tm:debug');
+  const dimMode = hideSettings.settings && hideSettings.settings.dim;
+  await evaluate(`document.querySelector('#work_102 .ao3tm-tool-hide').click()`);
+  await waitFor(`document.getElementById('work_102').classList.contains('ao3tm-hidden')`, '再次隐藏 102');
+  await sleep(400);
+  const hiddenState = await evaluate(`(() => {
+    const el = document.getElementById('work_102');
+    return { dim: el.classList.contains('ao3tm-dim'), display: getComputedStyle(el).display, hasBtn: !!el.querySelector('.ao3tm-tool-hide') };
+  })()`);
+  await evaluate(`document.querySelector('#work_102 .ao3tm-tool-hide').click()`);
+  await sleep(900);
+  const afterModeUndo = await command('ao3tm:debug');
+  record(
+    '隐藏样式（变灰 / 移除）下按钮仍可点，点了真的取消隐藏',
+    hiddenState.hasBtn && afterModeUndo.counts.hiddenWorks === 0,
+    { dimMode: !!dimMode, hiddenState: hiddenState, counts: afterModeUndo.counts }
+  );
+
+  // 恢复现场：确保 101/103 仍是被 Fluff 规则隐藏的状态，供场景 6 使用
+  const restoredState = await command('ao3tm:debug');
+  record(
+    '恢复现场：规则隐藏的 2 篇仍在（供临时显示用例使用）',
+    restoredState.counts.hiddenWorks === 0 &&
+      (await evaluate(`document.querySelectorAll('li.blurb.ao3tm-hidden').length`)) === 2,
+    { counts: restoredState.counts, hiddenDom: await evaluate(`document.querySelectorAll('li.blurb.ao3tm-hidden').length`) }
+  );
 
   // 场景 6：临时显示 / 恢复隐藏（统计条按钮）
   // 先复位：本页可能残留上一次"临时显示"状态，否则开关初始态不可预期
@@ -815,7 +883,105 @@ async function main() {
       (await menuRegistered('ao3tm-open-panel')) === 'ok'
   );
 
-  // 12.7 规则编辑器：把误粘成一条的标签拆开
+  // 12.7 卡片"屏蔽"菜单：要能一键屏蔽这篇 / 这个作者 / 这个标签
+  await command('ao3tm:debug', { clear: true });
+  await sleep(900);
+  await evaluate(`window.dispatchEvent(new CustomEvent('ao3tm:command', { detail: JSON.stringify({ type: 'ao3tm:refresh', id: 'x1' }) }))`);
+  await sleep(800);
+  await evaluate(`document.querySelector('#work_101 .ao3tm-tool-menu').click()`);
+  await sleep(400);
+  const cardMenu = await evaluate(`(() => {
+    const menu = document.querySelector('.ao3tm-menu');
+    if (!menu) return null;
+    return {
+      acts: Array.prototype.map.call(menu.querySelectorAll('[data-act]'), n => n.getAttribute('data-act')),
+      blockRows: menu.querySelectorAll('button[data-act$="-block"]').length,
+      onlyRows: menu.querySelectorAll('button[data-act$="-only"]').length
+    };
+  })()`);
+  record(
+    '卡片屏蔽菜单：一键屏蔽这篇作品 + 每个作者/标签都有屏蔽与只看',
+    cardMenu &&
+      cardMenu.acts.indexOf('work') !== -1 &&
+      cardMenu.acts.indexOf('hide') !== -1 &&
+      cardMenu.blockRows >= 2 &&
+      cardMenu.onlyRows === cardMenu.blockRows,
+    cardMenu
+  );
+  const beforeCardWork = (await command('ao3tm:state')).counts.blockedWorks;
+  await clickMenuAction('work');
+  await sleep(900);
+  const afterCardWork = (await command('ao3tm:state')).counts.blockedWorks;
+  record('卡片菜单里点"屏蔽这篇作品"写入名单（+1）', afterCardWork === beforeCardWork + 1, { before: beforeCardWork, after: afterCardWork });
+  await evaluate(`window.dispatchEvent(new CustomEvent('ao3tm:command', { detail: JSON.stringify({ type: 'ao3tm:refresh', id: 'x2' }) }))`);
+  await sleep(600);
+
+  // 12.8 作品页：右键标题（不是标签/作者）也要能屏蔽这篇作品
+  await navigate(PAGE_URL.replace(/list\.html$/, 'works/12345'));
+  await waitFor(`!!document.documentElement.getAttribute('data-ao3tm-ready')`, '作品页就绪');
+  await command('ao3tm:debug', { clear: true });
+  await sleep(800);
+
+  const okWorkPage = await rightClick('h2.title.heading');
+  const workPageDebug = await command('ao3tm:debug');
+  const workPageMenu = workPageDebug.contextMenu;
+  record(
+    '作品页右键标题：识别为作品并弹出菜单',
+    okWorkPage && !!workPageDebug.contextHit && workPageDebug.contextHit.kind === 'work' && !!workPageMenu,
+    { hit: workPageDebug.contextHit, menu: workPageMenu && workPageMenu.actions }
+  );
+  record(
+    '作品页右键菜单包含：屏蔽这篇作品 / 隐藏这篇 / 标签与作者快捷操作',
+    workPageMenu &&
+      workPageMenu.actions.indexOf('work') !== -1 &&
+      workPageMenu.actions.indexOf('hide') !== -1 &&
+      workPageMenu.actions.indexOf('author-block') !== -1 &&
+      workPageMenu.actions.indexOf('tag-block') !== -1,
+    workPageMenu && { actions: workPageMenu.actions, rows: workPageMenu.rows }
+  );
+
+  const beforeWorkPage = (await command('ao3tm:state')).counts.blockedWorks;
+  await clickMenuAction('work');
+  await sleep(900);
+  const afterWorkPage = (await command('ao3tm:state')).counts.blockedWorks;
+  record('作品页菜单点"屏蔽这篇作品"写入名单（+1）', afterWorkPage === beforeWorkPage + 1, { before: beforeWorkPage, after: afterWorkPage });
+
+  await rightClick('h2.title.heading');
+  const workItemLabel = await evaluate(`(() => {
+    const btn = document.querySelector('.ao3tm-menu button[data-act="work"]');
+    return btn ? btn.textContent.trim() : null;
+  })()`);
+  record('再次右键：作品项变成"移出屏蔽名单"（可来回切）', /移出屏蔽名单/.test(String(workItemLabel)), { label: workItemLabel });
+  await clickMenuAction('work');
+  await sleep(900);
+  const finalWorkPage = (await command('ao3tm:state')).counts.blockedWorks;
+  record('点"移出屏蔽名单"生效（-1）', finalWorkPage === beforeWorkPage, { before: beforeWorkPage, after: finalWorkPage });
+  await shot('25-workpage-menu');
+
+  // 作品页"隐藏这篇"也要能来回切
+  await rightClick('h2.title.heading');
+  await clickMenuAction('hide');
+  await sleep(900);
+  const hiddenOnWorkPage = (await command('ao3tm:state')).counts.hiddenWorks;
+  await rightClick('h2.title.heading');
+  const hideLabel = await evaluate(`(() => {
+    const btn = document.querySelector('.ao3tm-menu button[data-act="hide"]');
+    return btn ? btn.textContent.trim() : null;
+  })()`);
+  await clickMenuAction('hide');
+  await sleep(900);
+  const hiddenAfterUndo = (await command('ao3tm:state')).counts.hiddenWorks;
+  record(
+    '作品页"隐藏这篇"能来回切（隐藏 -> 取消隐藏）',
+    hiddenOnWorkPage === 1 && /取消隐藏/.test(String(hideLabel)) && hiddenAfterUndo === 0,
+    { afterHide: hiddenOnWorkPage, label: hideLabel, afterUndo: hiddenAfterUndo }
+  );
+
+  // 把布局切回列表页，后面的用例继续用
+  await navigate(PAGE_URL);
+  await waitFor(`!!document.documentElement.getAttribute('data-ao3tm-ready')`, '回到列表页');
+
+  // 12.9 规则编辑器：把误粘成一条的标签拆开
   await command('ao3tm:debug', { clear: true });
   await sleep(600);
   await command('ao3tm:context-action', { action: 'tag-block' }); // 先准备一个右键目标

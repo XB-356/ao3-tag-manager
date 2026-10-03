@@ -47,13 +47,26 @@
     );
   }
 
+  /**
+   * 只靠域名判断"值不值得检测"。
+   * 页面结构判定要读 DOM，而内容脚本没注入时读不到，
+   * 所以这里仍用域名线索做第一道筛子（detect.domainSignals），
+   * 用户点"检测并启用"获得权限后，内容脚本会在页面里做完整的结构判定。
+   */
+  function domainLooksLikeAo3(host) {
+    const detector = window.AO3TM.detect;
+    if (!detector || !host) return false;
+    return detector.domainSignals(host).length > 0;
+  }
+
   function describeSite(tab) {
     const el = document.getElementById('site-state');
     const enableBtn = document.getElementById('enable-site');
     const host = tab && tab.url ? hostOf(tab.url) : '';
-    const onAo3ish = /^https?:/.test(tab && tab.url ? tab.url : '') && /ao3|archiveofourown|transformativeworks/i.test(host);
+    const httpish = /^https?:/.test(tab && tab.url ? tab.url : '');
+    const suspicious = httpish && domainLooksLikeAo3(host);
 
-    if (!host || (!isStaticHost(host) && !onAo3ish)) {
+    if (!host || (!isStaticHost(host) && !suspicious)) {
       el.textContent = '当前标签页不是 AO3——规则仍会保存，打开 AO3 后自动生效。';
       el.classList.add('is-muted');
       document.getElementById('refresh-page').disabled = true;
@@ -62,14 +75,20 @@
     }
 
     el.classList.remove('is-muted');
-    // 镜像站：先看内容脚本在不在
+    // 先看内容脚本在不在：在的话能直接给本页统计；不在就说明这个域名还没启用
     sendToTab(tab.id, { type: 'ao3tm:state' }).then(function (state) {
       if (!state) {
         if (isStaticHost(host)) {
           el.textContent = '已打开 AO3 页面（刷新一次后弹窗即可读取本页统计）。';
           if (enableBtn) enableBtn.hidden = true;
         } else {
-          el.textContent = '这个域名（' + host + '）看起来是 AO3 镜像，但还没启用。启用后才能在这上面使用标签管家。';
+          const detector = window.AO3TM.detect;
+          const signals = detector ? detector.domainSignals(host) : [];
+          const why = signals.length
+            ? '（域名特征：' + signals.map(function (s) { return s.label; }).join('、') + '）'
+            : '';
+          el.textContent =
+            host + ' 还没启用，扩展看不到这个页面的内容' + why + '。点下面的按钮授权并检测这个网站。';
           if (enableBtn) enableBtn.hidden = false;
         }
         return;
@@ -104,7 +123,8 @@
         chrome.runtime.sendMessage({ type: 'ao3tm:save-mirror', host: normalized }, function (result) {
           void chrome.runtime.lastError;
           if (result && result.ok) {
-            el.textContent = '已启用 ' + normalized + '，刷新这个页面就能用了。';
+            // 刷新后内容脚本注入，页面里会自动跑一次结构检测并给出结论
+            el.textContent = '已启用 ' + normalized + '，正在刷新，刷新后会在页面顶部给出检测结论。';
             if (activeTabId != null) chrome.tabs.reload(activeTabId);
           } else {
             el.textContent = '启用失败：' + ((result && result.reason) || '未知原因');

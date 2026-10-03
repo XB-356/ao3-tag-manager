@@ -634,8 +634,27 @@ html[data-ao3tm-theme] [data-ao3tm-bilingual] {
   text-decoration: underline;
 }
 
-/* 镜像站列表：域名 + 预置标签 */
-.ao3tm-mirror-host {
+/* 自动检测状态行 */
+.ao3tm-detect-status {
+  margin: 6px 0;
+  padding: 7px 9px;
+  border-left: 3px solid var(--ao3tm-muted);
+  border-radius: 3px;
+  background: var(--ao3tm-hover);
+  color: var(--ao3tm-text);
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+
+.ao3tm-detect-status.is-on {
+  border-left-color: #2e7d32;
+}
+
+html[data-ao3tm-theme='dark'] .ao3tm-detect-status.is-on {
+  border-left-color: #81c784;
+}
+
+/* 镜像站列表：域名 + 预置标签 */.ao3tm-mirror-host {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1031,6 +1050,18 @@ a.ao3tm-tag-only {
   color: var(--ao3tm-accent);
 }
 
+/* 已经是"已屏蔽 / 已隐藏"状态时给个标记，点一下就是反操作 */
+.ao3tm-menu-item.is-on {
+  font-weight: 600;
+  color: var(--ao3tm-accent);
+}
+
+.ao3tm-work-hide.is-on,
+.ao3tm-tool-hide.is-on {
+  color: var(--ao3tm-accent);
+  font-weight: 600;
+}
+
 .ao3tm-menu-row {
   display: flex;
   align-items: center;
@@ -1059,6 +1090,197 @@ a.ao3tm-tag-only {
   border-top: 1px solid var(--ao3tm-border);
   display: flex;
   justify-content: flex-end;
+}
+
+/* ------------------------------ 镜像站自动检测横幅 ------------------------------ */
+
+.ao3tm-detect-banner {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 10px 34px 10px 12px;
+  border-left: 4px solid #b8860b;
+  border-radius: 4px;
+  background: #fff8e1;
+  color: #3b2f00;
+  font-family: system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  font-size: 12.5px;
+  line-height: 1.6;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  z-index: 2147483000;
+}
+
+.ao3tm-detect-banner.is-high {
+  border-left-color: #2e7d32;
+  background: #eef7ee;
+  color: #1b3d1f;
+}
+
+.ao3tm-detect-banner.is-low {
+  border-left-color: #9e9e9e;
+  background: #f4f4f4;
+  color: #333;
+}
+
+.ao3tm-detect-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ao3tm-detect-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.ao3tm-detect-level {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+  font-weight: 500;
+  font-size: 10.5px;
+}
+
+.ao3tm-detect-host {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 11.5px;
+  font-weight: 500;
+  opacity: 0.75;
+}
+
+.ao3tm-detect-reasons {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 11.5px;
+  opacity: 0.85;
+}
+
+.ao3tm-detect-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.ao3tm-detect-btn {
+  padding: 3px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.ao3tm-detect-btn:hover {
+  border-color: rgba(0, 0, 0, 0.4);
+}
+
+.ao3tm-detect-btn.is-primary {
+  border-color: #2e7d32;
+  background: #2e7d32;
+  color: #fff;
+  font-weight: 600;
+}
+
+.ao3tm-detect-btn.is-primary:hover {
+  background: #276b2a;
+}
+
+.ao3tm-detect-btn.is-ghost {
+  border-style: dashed;
+}
+
+.ao3tm-detect-btn[disabled] {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.ao3tm-detect-ok {
+  align-self: center;
+  font-weight: 600;
+  color: #2e7d32;
+}
+
+.ao3tm-detect-note {
+  margin-top: 6px;
+  font-size: 11.5px;
+  opacity: 0.8;
+}
+
+.ao3tm-detect-code {
+  display: block;
+  margin-top: 6px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.06);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 11.5px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.ao3tm-detect-close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  padding: 0 4px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 16px;
+  line-height: 1;
+  opacity: 0.5;
+  cursor: pointer;
+}
+
+.ao3tm-detect-close:hover {
+  opacity: 1;
+}
+
+/* 深色页面下的横幅：跟着站点的深色模式走 */
+html[data-ao3tm-theme='dark'] .ao3tm-detect-banner {
+  border-left-color: #e0a800;
+  background: #2b2618;
+  color: #f0e6d2;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+}
+
+html[data-ao3tm-theme='dark'] .ao3tm-detect-banner.is-high {
+  border-left-color: #66bb6a;
+  background: #1e2a1f;
+  color: #dff0e0;
+}
+
+html[data-ao3tm-theme='dark'] .ao3tm-detect-banner.is-low {
+  border-left-color: #757575;
+  background: #262626;
+  color: #ddd;
+}
+
+html[data-ao3tm-theme='dark'] .ao3tm-detect-btn {
+  border-color: rgba(255, 255, 255, 0.28);
+  background: #2f2f2f;
+  color: inherit;
+}
+
+html[data-ao3tm-theme='dark'] .ao3tm-detect-btn.is-primary {
+  border-color: #4caf50;
+  background: #2e7d32;
+  color: #fff;
+}
+
+html[data-ao3tm-theme='dark'] .ao3tm-detect-ok {
+  color: #81c784;
+}
+
+html[data-ao3tm-theme='dark'] .ao3tm-detect-code {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* -------------------------------- 页内：提示 ------------------------------ */

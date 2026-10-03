@@ -39,12 +39,18 @@
         }
       });
 
+      // 镜像站自动检测：拿到"所有网站"权限时，会在陌生站点上判定并给出启用横幅
+      if (root.AO3TM.autoDetect) {
+        root.AO3TM.autoDetect.autoRun();
+      }
+
       // AO3 用 Turbo 做站内跳转，切换页面后重新扫描
       ['turbo:load', 'turbo:render', 'pjax:end'].forEach(function (name) {
         document.addEventListener(name, function () {
           setTimeout(function () {
             root.AO3TM.ui.refresh();
             if (root.AO3TM.focus) root.AO3TM.focus.apply();
+            if (root.AO3TM.autoDetect) root.AO3TM.autoDetect.autoRun();
           }, 60);
         });
       });
@@ -55,6 +61,7 @@
           lastUrl = location.href;
           root.AO3TM.ui.refresh();
           if (root.AO3TM.focus) root.AO3TM.focus.apply();
+          if (root.AO3TM.autoDetect) root.AO3TM.autoDetect.autoRun();
         }
       }, 1200);
     });

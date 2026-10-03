@@ -77,6 +77,95 @@
       return true;
     }
 
+    // 测试用/排查用：返回当前页面的 AO3 识别结果
+    if (message.detect || message.mirrorDetect) {
+      const auto = root.AO3TM.autoDetect;
+      const detector = root.AO3TM.detect;
+      if (!detector) {
+        sendResponse(null);
+        return true;
+      }
+      const finish = function (result) {
+        sendResponse({
+          level: result.level,
+          isAo3: result.isAo3,
+          score: result.score,
+          host: result.host,
+          enabledHere: result.enabledHere,
+          canAutoScan: !!result.canAutoScan,
+          reasons: result.reasons.map(function (item) {
+            return item.key + ':' + item.weight;
+          }),
+          banner: !!document.getElementById(auto ? auto.BANNER_ID : 'ao3tm-auto-banner'),
+          skipped: (function () {
+            try {
+              return JSON.parse(root.localStorage.getItem(auto ? auto.SKIP_KEY : 'ao3tm_detect_skip') || '[]');
+            } catch (err) {
+              return [];
+            }
+          })()
+        });
+      };
+      if (auto) auto.checkAsync().then(finish);
+      else finish(detector.detect(document, location));
+      return true;
+    }
+
+    // 测试用：把当前页面按指定域名挂一次检测横幅（页面侧在隔离世界，测试点不到）
+    if (message.autoMountForTest) {
+      const auto = root.AO3TM.autoDetect;
+      if (!auto) {
+        sendResponse({ ok: false, reason: 'no-auto-detect' });
+        return true;
+      }
+      const result = auto.check(document, {
+        hostname: message.autoMountForTest,
+        protocol: location.protocol || 'https:'
+      });
+      // 允许测试指定"是否算已启用"，用来覆盖两种分支
+      if (message.autoMountEnabled !== undefined) result.enabledHere = !!message.autoMountEnabled;
+      const banner = auto.mountBanner(result);
+      sendResponse({
+        ok: true,
+        mounted: !!banner,
+        isAo3: result.isAo3,
+        level: result.level,
+        enabledHere: result.enabledHere
+      });
+      return true;
+    }
+
+    // 测试用：清空忽略名单（内存 + localStorage 都要清，否则同一次会话里仍会被拒）
+    if (message.autoResetSkip) {
+      const auto = root.AO3TM.autoDetect;
+      if (auto) auto.clearSkipped();
+      try {
+        root.localStorage.removeItem(auto ? auto.SKIP_KEY : 'ao3tm_detect_skip');
+      } catch (err) {
+        /* ignore */
+      }
+      sendResponse({ ok: true });
+      return true;
+    }
+
+    // 测试用：跑一次自动检测（不挂横幅）
+    if (message.autoRun) {
+      const auto = root.AO3TM.autoDetect;
+      if (!auto) {
+        sendResponse({ ok: false, reason: 'no-auto-detect' });
+        return true;
+      }
+      auto.autoRun().then(function (result) {
+        sendResponse({
+          ok: true,
+          level: result ? result.level : null,
+          enabledHere: result ? result.enabledHere : null,
+          canAutoScan: result ? !!result.canAutoScan : null
+        });
+      });
+      return true;
+    }
+
     if (message.type === 'ao3tm:debug') {
       // 给自动化测试/排查用：先按当前设置应用一次主题与汉化，再返回状态
       const D = root.AO3TM.dom;

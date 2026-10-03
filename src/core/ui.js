@@ -156,20 +156,15 @@
       const hideBtn = document.createElement('button');
       hideBtn.type = 'button';
       hideBtn.className = NS + '-btn ao3tm-tool ao3tm-tool-hide';
-      hideBtn.title = '隐藏这篇（写进屏蔽名单，可用底部的临时显示恢复）';
+      hideBtn.title = '隐藏这篇（可随时点回来，底部「临时显示」也能放行）';
       hideBtn.innerHTML = icon('eyeOff') + '<span>隐藏</span>';
       hideBtn.addEventListener('click', function (event) {
         event.preventDefault();
         event.stopPropagation();
+        // 用卡片的真实路径，锁定后再切，避免隐藏/折叠后取不到
         const path = keyOf(el);
         if (!path) return;
-        store.hideWork(path);
-        toast('已隐藏《' + (D.titleOf(el) || path) + '》', {
-          actionLabel: '撤销',
-          onAction: function () {
-            store.unhideWork(path);
-          }
-        });
+        toggleWorkHide(path, D.titleOf(el));
       });
       tools.appendChild(hideBtn);
 
@@ -206,6 +201,47 @@
     } else {
       el.insertBefore(tools, el.firstChild);
     }
+  }
+
+  /**
+   * 同步卡片上"隐藏"按钮的状态。
+   * 隐藏后卡片会被折叠/移除，用户往往是被"临时显示"放行时才想点回来，
+   * 所以按钮必须能反映当前是"隐藏"还是"取消隐藏"，点了要能来回切。
+   */
+  function syncBlurbTools() {
+    if (D.isWorkPage()) {
+      syncWorkPageTools();
+      return;
+    }
+    D.blurbs().forEach(function (el) {
+      const path = keyOf(el);
+      const btn = el.querySelector('.' + NS + '-tool-hide');
+      if (!btn || !path) return;
+      const hidden = store.isWorkHidden(path);
+      const label = btn.querySelector('span');
+      const wanted = hidden ? '取消隐藏' : '隐藏';
+      if (label) {
+        if (label.textContent !== wanted) label.textContent = wanted;
+      } else if (btn.textContent !== wanted) {
+        btn.textContent = wanted;
+      }
+      btn.classList.toggle('is-on', hidden);
+      btn.title = hidden
+        ? '取消隐藏，这篇会回到列表里'
+        : '隐藏这篇（可随时点回来，底部「临时显示」也能放行）';
+      btn.setAttribute('data-act', hidden ? 'unhide' : 'hide');
+    });
+  }
+
+  function syncWorkPageTools() {
+    const box = document.querySelector('.ao3tm-work-hide');
+    if (!box) return;
+    const path = D.hrefToPath(location.pathname);
+    const hidden = path && store.isWorkHidden(path);
+    const label = box.querySelector('span');
+    if (label) label.textContent = hidden ? '取消隐藏' : '隐藏这篇';
+    box.classList.toggle('is-on', !!hidden);
+    box.title = hidden ? '取消隐藏，这篇会回到列表里' : '隐藏这篇（可随时点回来）';
   }
 
   function closeMenus() {
@@ -273,13 +309,15 @@
     let body = '';
     if (onlyTag) {
       // 右键标签：把该标签的操作放在最上面
-      body = '<div class="ao3tm-menu-label">这个标签</div>' + tagRows;
+      body = '<div class="ao3tm-menu-label">右键的这个标签</div>' + tagRows;
     } else if (onlyAuthor) {
-      body = '<div class="ao3tm-menu-label">这个作者</div>' + authorRows;
+      body = '<div class="ao3tm-menu-label">右键的这个作者</div>' + authorRows;
     } else {
-      body = authors.length ? '<div class="ao3tm-menu-label">作者</div>' + authorRows : '';
-      body += tags.length ? '<div class="ao3tm-menu-label">标签</div>' + tagRows : '';
+      body = authors.length ? '<div class="ao3tm-menu-label">作者（点一下即屏蔽 / 只看）</div>' + authorRows : '';
+      body += tags.length ? '<div class="ao3tm-menu-label">标签（点一下即屏蔽 / 只看）</div>' + tagRows : '';
     }
+
+    const hidden = path && store.isWorkHidden(path);
 
     const menu = document.createElement('div');
     menu.className = NS + '-menu';
@@ -288,9 +326,17 @@
       esc(headText) +
       (headSub ? '<small>' + esc(headSub) + '</small>' : '') +
       '</div>' +
-      '<button type="button" class="ao3tm-menu-item" data-act="work">' +
+      '<button type="button" class="ao3tm-menu-item' +
+      (blocked ? ' is-on' : '') +
+      '" data-act="work">' +
       icon(blocked ? 'undo' : 'block') +
       (blocked ? '移出屏蔽名单' : '屏蔽这篇作品') +
+      '</button>' +
+      '<button type="button" class="ao3tm-menu-item' +
+      (hidden ? ' is-on' : '') +
+      '" data-act="hide">' +
+      icon(hidden ? 'eye' : 'eyeOff') +
+      (hidden ? '取消隐藏这篇' : '隐藏这篇') +
       '</button>' +
       body +
       '<div class="ao3tm-menu-foot"><button type="button" class="ao3tm-btn ao3tm-btn-ghost" data-act="panel">' +
@@ -330,18 +376,10 @@
       const act = btn.getAttribute('data-act');
       const index = Number(btn.getAttribute('data-index'));
       if (act === 'work' && path) {
-        if (store.isWorkBlocked(path)) {
-          store.unblockWork(path);
-          toast('已移出屏蔽名单');
-        } else {
-          store.blockWork(path, title);
-          toast('已屏蔽《' + (title || path) + '》', {
-            actionLabel: '撤销',
-            onAction: function () {
-              store.unblockWork(path);
-            }
-          });
-        }
+        toggleWorkBlock(path, title);
+        closeMenus();
+      } else if (act === 'hide' && path) {
+        toggleWorkHide(path, title);
         closeMenus();
       } else if (act === 'panel') {
         closeMenus();
@@ -435,11 +473,24 @@
     bar.id = NS + '-workbar';
     bar.className = NS + '-workbar';
     const blocked = store.isWorkBlocked(path);
+    const hidden = path && store.isWorkHidden(path);
     bar.innerHTML =
       '<span class="ao3tm-workbar-label">标签管家</span>' +
-      '<button type="button" class="ao3tm-btn" data-act="work">' +
+      '<button type="button" class="ao3tm-btn' +
+      (blocked ? ' is-on' : '') +
+      '" data-act="work">' +
       icon(blocked ? 'undo' : 'block') +
       (blocked ? '移出屏蔽名单' : '屏蔽这篇作品') +
+      '</button>' +
+      '<button type="button" class="ao3tm-btn ao3tm-work-hide' +
+      (hidden ? ' is-on' : '') +
+      '" data-act="hide" title="' +
+      (hidden ? '取消隐藏，这篇会回到列表里' : '隐藏这篇（可随时点回来）') +
+      '">' +
+      icon(hidden ? 'eye' : 'eyeOff') +
+      '<span>' +
+      (hidden ? '取消隐藏' : '隐藏这篇') +
+      '</span>' +
       '</button>' +
       authors
         .map(function (author, index) {
@@ -470,18 +521,9 @@
       const act = btn.getAttribute('data-act');
       const index = Number(btn.getAttribute('data-index'));
       if (act === 'work' && path) {
-        if (store.isWorkBlocked(path)) {
-          store.unblockWork(path);
-          toast('已移出屏蔽名单');
-        } else {
-          store.blockWork(path, title);
-          toast('已屏蔽《' + (title || path) + '》', {
-            actionLabel: '撤销',
-            onAction: function () {
-              store.unblockWork(path);
-            }
-          });
-        }
+        toggleWorkBlock(path, title);
+      } else if (act === 'hide' && path) {
+        toggleWorkHide(path, title);
       } else if (act === 'panel') {
         openPanel();
       } else if (act.indexOf('author-') === 0 && authors[index]) {
@@ -631,6 +673,7 @@
     if (root.AO3TM.ui) root.AO3TM.ui.lastStats = result.stats;
     applyTheme();
     injectAll(result);
+    syncBlurbTools();
     renderBar(result);
     updateFab();
     // 界面汉化：注入完成后跑一轮（字典里没有的文案不会被改动）
@@ -773,49 +816,165 @@
       openBlurbMenu(blurb, null, point, null);
       return true;
     }
-    // 作品页：没有卡片容器时，也能对页面上任意标签 / 作者操作
+    // 作品页：没有卡片容器，右键任意位置都能操作"这篇作品 / 作者 / 标签"
     if (D.isWorkPage()) {
-      if (tag || author) {
-        event.preventDefault();
-        event.stopPropagation();
-        openWorkPageContextMenu(tag, author, point);
-        return true;
-      }
+      event.preventDefault();
+      event.stopPropagation();
+      openWorkPageContextMenu(tag, author, point);
+      return true;
     }
     return false;
   }
 
-  /** 作品页上的右键菜单（没有卡片容器，直接给标签 / 作者操作） */
+  /** 作品页菜单的头副标题：显示这篇作品的作者 */
+  function authorsSubtitle(path) {
+    const authors = D.workPageAuthors ? D.workPageAuthors() : [];
+    if (!authors.length) return path ? '<small>' + esc(path) + '</small>' : '';
+    return '<small>' + esc(authors.join('、')) + '</small>';
+  }
+
+  /** 屏蔽 / 移出屏蔽名单（右键菜单与快速按钮共用） */
+  function toggleWorkBlock(path, title) {
+    if (!path) return;
+    const label = '《' + (title || path) + '》';
+    if (store.isWorkBlocked(path)) {
+      store.unblockWork(path);
+      toast('已移出屏蔽名单：' + label);
+    } else {
+      store.blockWork(path, title);
+      toast('已屏蔽' + label, {
+        actionLabel: '撤销',
+        onAction: function () {
+          store.unblockWork(path);
+        }
+      });
+    }
+    refresh();
+  }
+
+  /** 隐藏 / 取消隐藏（不写规则，只进本站隐藏名单） */
+  function toggleWorkHide(path, title) {
+    if (!path) return;
+    const label = '《' + (title || path) + '》';
+    if (store.isWorkHidden(path)) {
+      store.unhideWork(path);
+      toast('已取消隐藏 ' + label);
+    } else {
+      store.hideWork(path);
+      toast('已隐藏 ' + label, {
+        actionLabel: '撤销',
+        onAction: function () {
+          store.unhideWork(path);
+        }
+      });
+    }
+    refresh();
+  }
+
+  /** 作品页上的右键菜单（没有卡片容器，直接给作品 / 标签 / 作者操作） */
   function openWorkPageContextMenu(tag, author, point) {
     closeMenus();
     const title = D.workPageTitle();
     const path = D.hrefToPath(location.pathname);
-    const label = tag || author + store.AUTHOR_LABEL_SUFFIX;
-    const kind = tag ? 'tag' : 'author';
-    const value = tag || author;
-    const isBlock = store.hasRule(kind, value, 'block');
-    const isOnly = store.hasRule(kind, value, 'allow');
     const blocked = path && store.isWorkBlocked(path);
+    const hidden = path && store.isWorkHidden(path);
+
+    // 右击的具体对象（标签 / 作者）放在最上面，作品级操作始终保留
+    let head = title || path || '这篇作品';
+    let body = '';
+    if (tag || author) {
+      const kind = tag ? 'tag' : 'author';
+      const value = tag || author;
+      const label = tag || author + store.AUTHOR_LABEL_SUFFIX;
+      head = label;
+      body =
+        '<div class="ao3tm-menu-label">右键的这个' +
+        (tag ? '标签' : '作者') +
+        '</div>' +
+        '<div class="ao3tm-menu-row"><span class="ao3tm-menu-name">' +
+        esc(label) +
+        '</span><button type="button" class="ao3tm-chip' +
+        (store.hasRule(kind, value, 'block') ? ' is-on' : '') +
+        '" data-act="one-block">屏蔽</button><button type="button" class="ao3tm-chip' +
+        (store.hasRule(kind, value, 'allow') ? ' is-on' : '') +
+        '" data-act="one-only">只看</button></div>';
+    } else {
+      // 作品页要用作品页的解析器：列表页的 authorsOf 找的是 li.author/.byline，
+      // work 页的作者在 .work.meta.group 里，两者选择器不一样
+      const authors = D.workPageAuthors ? D.workPageAuthors() : [];
+      const tags = D.workPageTagNames ? D.workPageTagNames().slice(0, 10) : [];
+      if (authors.length) {
+        body +=
+          '<div class="ao3tm-menu-label">作者</div>' +
+          authors
+            .map(function (name, index) {
+              return (
+                '<div class="ao3tm-menu-row"><span class="ao3tm-menu-name" title="' +
+                esc(name) +
+                '">' +
+                esc(name) +
+                '</span><button type="button" class="ao3tm-chip' +
+                (store.hasRule('author', name, 'block') ? ' is-on' : '') +
+                '" data-act="author-block" data-index="' +
+                index +
+                '">屏蔽</button><button type="button" class="ao3tm-chip' +
+                (store.hasRule('author', name, 'allow') ? ' is-on' : '') +
+                '" data-act="author-only" data-index="' +
+                index +
+                '">只看</button></div>'
+              );
+            })
+            .join('');
+      }
+      if (tags.length) {
+        body +=
+          '<div class="ao3tm-menu-label">标签</div>' +
+          tags
+            .map(function (name, index) {
+              return (
+                '<div class="ao3tm-menu-row"><span class="ao3tm-menu-name" title="' +
+                esc(name) +
+                '">' +
+                esc(name) +
+                '</span><button type="button" class="ao3tm-chip' +
+                (store.hasRule('tag', name, 'block') ? ' is-on' : '') +
+                '" data-act="tag-block" data-index="' +
+                index +
+                '">屏蔽</button><button type="button" class="ao3tm-chip' +
+                (store.hasRule('tag', name, 'allow') ? ' is-on' : '') +
+                '" data-act="tag-only" data-index="' +
+                index +
+                '">只看</button></div>'
+              );
+            })
+            .join('');
+      }
+    }
+
+    // 行内按钮需要按 index 找回具体取值
+    const pageAuthors = D.workPageAuthors ? D.workPageAuthors() : [];
+    const pageTags = D.workPageTagNames ? D.workPageTagNames().slice(0, 10) : [];
 
     const menu = document.createElement('div');
     menu.className = NS + '-menu';
     menu.innerHTML =
       '<div class="ao3tm-menu-head">' +
-      esc(label) +
-      '<small>' +
-      esc(title || '') +
-      '</small></div>' +
-      '<div class="ao3tm-menu-row"><span class="ao3tm-menu-name">' +
-      (tag ? '这个标签' : '这个作者') +
-      '</span><button type="button" class="ao3tm-chip' +
-      (isBlock ? ' is-on' : '') +
-      '" data-act="one-block">屏蔽</button><button type="button" class="ao3tm-chip' +
-      (isOnly ? ' is-on' : '') +
-      '" data-act="one-only">只看</button></div>' +
-      '<button type="button" class="ao3tm-menu-item" data-act="work">' +
+      esc(head) +
+      (tag || author ? '<small>' + esc(title || '') + '</small>' : authorsSubtitle(path)) +
+      '</div>' +
+      '<button type="button" class="ao3tm-menu-item' +
+      (blocked ? ' is-on' : '') +
+      '" data-act="work">' +
       icon(blocked ? 'undo' : 'block') +
       (blocked ? '移出屏蔽名单' : '屏蔽这篇作品') +
       '</button>' +
+      '<button type="button" class="ao3tm-menu-item' +
+      (hidden ? ' is-on' : '') +
+      '" data-act="hide">' +
+      icon(hidden ? 'eye' : 'eyeOff') +
+      (hidden ? '取消隐藏这篇' : '隐藏这篇') +
+      '</button>' +
+      body +
       '<div class="ao3tm-menu-foot"><button type="button" class="ao3tm-btn ao3tm-btn-ghost" data-act="panel">' +
       icon('cog') +
       '规则设置</button></div>';
@@ -839,25 +998,50 @@
       const btn = event.target.closest('button[data-act]');
       if (!btn) return;
       const act = btn.getAttribute('data-act');
+      const index = Number(btn.getAttribute('data-index'));
+
+      // 右键标签 / 作者时，只关心这一个对象
       if (act === 'one-block' || act === 'one-only') {
+        const kind = tag ? 'tag' : 'author';
+        const value = tag || author;
         const result = store.toggleRule(kind, value, act === 'one-only' ? 'allow' : 'block');
-        toast(ruleMessage(result, label));
+        toast(ruleMessage(result, tag || author + store.AUTHOR_LABEL_SUFFIX));
+        closeMenus();
         refresh();
-      } else if (act === 'work' && path) {
-        if (store.isWorkBlocked(path)) {
-          store.unblockWork(path);
-          toast('已移出屏蔽名单');
-        } else {
-          store.blockWork(path, title);
-          toast('已屏蔽《' + (title || path) + '》', {
-            actionLabel: '撤销',
-            onAction: function () {
-              store.unblockWork(path);
-            }
-          });
+        return;
+      }
+      // 右键作品页空白处时，列表里点哪一条都行
+      if (act === 'author-block' || act === 'author-only') {
+        const name = pageAuthors[index];
+        if (name) {
+          const result = store.toggleRule('author', name, act === 'author-only' ? 'allow' : 'block');
+          toast(ruleMessage(result, name + store.AUTHOR_LABEL_SUFFIX));
         }
         closeMenus();
-      } else if (act === 'panel') {
+        refresh();
+        return;
+      }
+      if (act === 'tag-block' || act === 'tag-only') {
+        const name = pageTags[index];
+        if (name) {
+          const result = store.toggleRule('tag', name, act === 'tag-only' ? 'allow' : 'block');
+          toast(ruleMessage(result, name));
+        }
+        closeMenus();
+        refresh();
+        return;
+      }
+      if (act === 'work' && path) {
+        toggleWorkBlock(path, title);
+        closeMenus();
+        return;
+      }
+      if (act === 'hide' && path) {
+        toggleWorkHide(path, title);
+        closeMenus();
+        return;
+      }
+      if (act === 'panel') {
         closeMenus();
         openPanel();
       }

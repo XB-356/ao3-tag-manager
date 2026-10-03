@@ -8,7 +8,9 @@ const PORT = Number(process.env.PORT || 8877);
 const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json' };
 
 const server = http.createServer((req, res) => {
-  const urlPath = decodeURIComponent(req.url.split('?')[0]);
+  let urlPath = decodeURIComponent(req.url.split('?')[0]);
+  // 真实 AO3 的作品页路径形如 /works/12345[/chapters/1]，测试里映射到同一份 mock 作品页
+  if (/^\/works\/\d+/.test(urlPath)) urlPath = '/work.html';
   const file = path.join(ROOT, urlPath === '/' ? 'list.html' : urlPath);
   if (!file.startsWith(ROOT)) {
     res.writeHead(403).end('forbidden');

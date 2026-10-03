@@ -96,6 +96,16 @@
       render();
     } else if (act === 'add-rule') {
       addFromInputs();
+    } else if (act === 'detect-grant') {
+      grantAllSites();
+    } else if (act === 'detect-revoke') {
+      revokeAllSites();
+    } else if (act === 'detect-reset-skip') {
+      const auto = autoDetectModule();
+      if (auto) {
+        auto.clearSkipped();
+        if (root.AO3TM.ui) root.AO3TM.ui.toast('已清空忽略名单');
+      }
     } else if (act === 'mirror-add') {
       addMirrorFromInput();
     } else if (act === 'mirror-enable') {
@@ -104,8 +114,7 @@
       if (mod && host) {
         mod.enableFromPage(host).then(function (result) {
           if (root.AO3TM.ui) root.AO3TM.ui.toast(mirrorStatusText(result));
-          mirrorRows = null;
-          loadMirrors();
+          loadMirrors(true);
         });
       }
     } else if (act === 'mirror-disable') {
@@ -211,7 +220,7 @@
     else if (activeTab === 'only') body.innerHTML = renderRulesTab(state, 'allow');
     else if (activeTab === 'works') body.innerHTML = renderWorksTab(state);
     else body.innerHTML = renderSettingsTab(state);
-    if (activeTab === 'settings' && mirrorRows === null) loadMirrors();
+    if (activeTab === 'settings' && !mirrorLoaded) loadMirrors();
 
     panelEl.querySelector('.ao3tm-panel-foot').innerHTML =
       '<div class="ao3tm-foot-stat">标签规则 ' +
@@ -508,25 +517,99 @@
 
   /** 镜像站列表（设置页渲染时异步拉取） */
   let mirrorRows = null;
+  let mirrorLoaded = false;
+  let mirrorLoading = false;
+  let allSitesGranted = null;
+  let allSitesLoading = false;
   let mirrorCurrentHost = '';
 
   function mirrorModule() {
     return root.AO3TM.mirrors || null;
   }
 
-  function loadMirrors() {
+  function autoDetectModule() {
+    return root.AO3TM.autoDetect || null;
+  }
+
+  /**
+   * 拉取镜像列表与权限状态（设置页用）。
+   * 两点教训（都踩过）：
+   *   1) 加载中必须显式 return：写成 `if (!loading) { loading = true; ... }` 时，
+   *      加载中会跳过赋值继续往下走，调用方又触发下一次 render → 无限递归。
+   *   2) 外部不能拿"数据是否为 null"当"是否已加载"：油猴版没有 mirrors 模块，
+   *      mirrorRows 永远是 null，render 就会一直重新拉取。用独立的 loaded 标记。
+   */
+  function loadMirrors(force) {
+    if (force) mirrorLoaded = false;
+    if (mirrorLoaded || mirrorLoading || allSitesLoading) return;
     const mod = mirrorModule();
-    if (!mod || !mod.overview) return;
+    const auto = autoDetectModule();
     mirrorCurrentHost = location.hostname || '';
-    mod
-      .overview()
-      .then(function (rows) {
-        mirrorRows = rows || [];
-        if (activeTab === 'settings' && panelEl) render();
-      })
-      .catch(function () {
-        mirrorRows = [];
-      });
+
+    if (!mod || !mod.overview) {
+      // 没有镜像模块（油猴版）：标记为已加载，避免 render 反复调用
+      mirrorLoaded = true;
+    } else {
+      mirrorLoading = true;
+      mod
+        .overview()
+        .then(function (rows) {
+          mirrorRows = rows || [];
+        })
+        .catch(function () {
+          mirrorRows = [];
+        })
+        .then(function () {
+          mirrorLoading = false;
+          mirrorLoaded = true;
+          if (activeTab === 'settings' && panelEl) render();
+        });
+    }
+
+    if (auto) {
+      allSitesLoading = true;
+      auto
+        .hasAllSitesPermission()
+        .then(function (granted) {
+          allSitesGranted = !!granted;
+        })
+        .catch(function () {
+          allSitesGranted = false;
+        })
+        .then(function () {
+          allSitesLoading = false;
+          if (activeTab === 'settings' && panelEl) render();
+        });
+    }
+  }
+
+  /** 自动检测区块：权限状态 + 开关 + 忽略名单 */
+  function renderAutoDetectBlock() {
+    const auto = autoDetectModule();
+    const detector = root.AO3TM.detect;
+    if (!auto || !detector) return '';
+    const granted = allSitesGranted === true;
+    const unknown = allSitesGranted === null;
+
+    const status = unknown
+      ? '<div class="ao3tm-empty">正在读取权限状态…</div>'
+      : granted
+        ? '<div class="ao3tm-detect-status is-on">已开启：遇到 AO3 镜像会直接在页面顶部提示，一键启用</div>'
+        : '<div class="ao3tm-detect-status">未开启：只能检测官方站和你已授权的域名。想让它自动发现镜像站，需要授予「所有网站」权限</div>';
+
+    return (
+      '<div class="ao3tm-subsection"><div class="ao3tm-subtitle">镜像站自动检测</div>' +
+      '<div class="ao3tm-hint">不知道镜像域名是不是真的 AO3？开启后，扩展会按页面结构（作品列表、标签链接、页脚结构等）自己判断，并在页面顶部给出结论和启用按钮。</div>' +
+      status +
+      '<div class="ao3tm-add-row">' +
+      (granted
+        ? '<button type="button" class="ao3tm-btn ao3tm-btn-ghost" data-act="detect-revoke">关闭自动检测（收回权限）</button>'
+        : '<button type="button" class="ao3tm-btn" data-act="detect-grant">开启自动检测</button>') +
+      '<button type="button" class="ao3tm-btn ao3tm-btn-ghost" data-act="detect-reset-skip">清空忽略名单</button>' +
+      '</div>' +
+      '<div class="ao3tm-hint">开启后内容脚本才有机会在每个网站上运行。判定结果只会本地使用，不上传任何数据。</div>' +
+      '</div>'
+    );
   }
 
   function renderMirrorsBlock() {
@@ -580,8 +663,41 @@
       '</div>'
     );
   }
-  function mirrorStatusText(result) {
-    if (!result) return '操作失败';
+  /** 申请「所有网站」权限（必须在用户手势里调用） */
+  function grantAllSites() {
+    const auto = autoDetectModule();
+    const api = root.AO3TM.env && root.AO3TM.env.chrome;
+    if (!auto || !api || !api.permissions) {
+      if (root.AO3TM.ui) root.AO3TM.ui.toast('油猴脚本版没有运行时权限，请把域名加进脚本头 @match');
+      return;
+    }
+    api.permissions.request({ origins: auto.ALL_URLS }, function (granted) {
+      if (api.runtime.lastError || !granted) {
+        if (root.AO3TM.ui) root.AO3TM.ui.toast('你取消了授权，自动检测未开启');
+        return;
+      }
+      allSitesGranted = true;
+      if (root.AO3TM.ui) root.AO3TM.ui.toast('已开启自动检测：遇到 AO3 镜像会在页面顶部提示');
+      // 权限刚拿到，立刻在当前页面跑一次检测，省得等刷新
+      auto.autoRun();
+      render();
+    });
+  }
+
+  function revokeAllSites() {
+    const auto = autoDetectModule();
+    const api = root.AO3TM.env && root.AO3TM.env.chrome;
+    if (!auto || !api || !api.permissions) return;
+    api.permissions.remove({ origins: auto.ALL_URLS }, function () {
+      void api.runtime.lastError;
+      allSitesGranted = false;
+      auto.removeBanner();
+      if (root.AO3TM.ui) root.AO3TM.ui.toast('已关闭自动检测');
+      render();
+    });
+  }
+
+  function mirrorStatusText(result) {    if (!result) return '操作失败';
     if (result.ok) return '已启用镜像：' + result.host;
     if (result.reason === 'static') return '这是官方站或本地地址，无需启用';
     if (result.reason === 'invalid') return '域名格式不对，示例：ao3.example.com';
@@ -605,8 +721,7 @@
       .then(function (result) {
         if (input) input.value = '';
         if (root.AO3TM.ui) root.AO3TM.ui.toast(mirrorStatusText(result));
-        mirrorRows = null;
-        loadMirrors();
+        loadMirrors(true);
       })
       .catch(function (err) {
         if (root.AO3TM.ui) root.AO3TM.ui.toast('启用失败：' + (err && err.message ? err.message : err));
@@ -620,8 +735,7 @@
       .disable(host)
       .then(function () {
         if (root.AO3TM.ui) root.AO3TM.ui.toast('已停用镜像：' + host);
-        mirrorRows = null;
-        loadMirrors();
+        loadMirrors(true);
       })
       .catch(function () {
         if (root.AO3TM.ui) root.AO3TM.ui.toast('停用失败');
@@ -679,6 +793,7 @@
       toggle('i18nBilingual', '悬停显示原文', '汉化后的元素鼠标悬停会显示英文原句') +
       '<div class="ao3tm-hint">切换开关后当前页面立即生效；已汉化的文案刷新页面会恢复英文。词典在 <code>src/lib/i18n.js</code>，可以自己加词条。</div>' +
       '</div>' +
+      renderAutoDetectBlock() +
       renderMirrorsBlock() +
       '<div class="ao3tm-subsection"><div class="ao3tm-subtitle">数据</div>' +
       '<div class="ao3tm-add-row">' +

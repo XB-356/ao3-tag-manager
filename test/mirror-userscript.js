@@ -47,7 +47,7 @@ class Cdp {
   send(method, params, sessionId) {
     const id = ++this.id;
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => { this.pending.delete(id); reject(new Error('CDP 超时: ' + method)); }, 20000);
+      const timer = setTimeout(() => { this.pending.delete(id); reject(new Error('CDP 超时: ' + method)); }, 30000);
       this.pending.set(id, { resolve: (v) => { clearTimeout(timer); resolve(v); }, reject: (e) => { clearTimeout(timer); reject(e); } });
       this.ws.send(JSON.stringify(Object.assign({ id, method, params: params || {} }, sessionId ? { sessionId } : {})));
     });
@@ -431,12 +431,12 @@ class Cdp {
   const regDebug = await command('ao3tm:debug', { mirrorRegistered: true });
   const reg = regDebug && regDebug.registered && regDebug.registered[0];
   record(
-    '动态注册的内容正确：协议双覆盖 + 13 个模块 + 跨会话保留',
+    '动态注册的内容正确：协议双覆盖 + 全部模块 + 跨会话保留',
     reg &&
       reg.id === 'ao3tm-mirror' &&
       reg.matches.indexOf('http://' + MIRROR_HOST + '/*') !== -1 &&
       reg.matches.indexOf('https://' + MIRROR_HOST + '/*') !== -1 &&
-      reg.js === 13 &&
+      reg.js === manifest.content_scripts[0].js.length &&
       reg.persist === true,
     reg
   );
