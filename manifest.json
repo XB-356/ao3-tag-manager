@@ -1,0 +1,60 @@
+{
+  "manifest_version": 3,
+  "name": "AO3 标签管家 - 屏蔽 / 只看",
+  "version": "1.0.0",
+  "default_locale": "zh_CN",
+  "description": "在 AO3 上记忆并管理标签与作者的屏蔽 / 只看规则，支持列表内快捷屏蔽、只看模式与规则导入导出。",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": ["storage", "contextMenus"],
+  "host_permissions": [
+    "https://archiveofourown.org/*",
+    "http://127.0.0.1/*",
+    "http://localhost/*"
+  ],
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "AO3 标签管家",
+    "default_popup": "src/popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "options_ui": {
+    "page": "src/popup/popup.html?mode=options",
+    "open_in_tab": true
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://archiveofourown.org/*",
+        "http://127.0.0.1/*",
+        "http://localhost/*"
+      ],
+      "js": [
+        "src/lib/storage.js",
+        "src/lib/match.js",
+        "src/lib/dom.js",
+        "src/lib/i18n.js",
+        "src/lib/panel.js",
+        "src/core/filter.js",
+        "src/core/ui.js",
+        "src/core/focus.js",
+        "src/core/content.js",
+        "src/core/main.js"
+      ],
+      "css": ["src/lib/panel.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}

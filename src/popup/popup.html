@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AO3 标签管家</title>
+    <link rel="stylesheet" href="../lib/panel.css" />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body class="ao3tm-popup">
+    <header class="ao3tm-popup-head">
+      <div class="ao3tm-popup-title">AO3 标签管家</div>
+      <div class="ao3tm-popup-site" id="site-state">正在读取当前页面…</div>
+    </header>
+    <main class="ao3tm-popup-body" id="panel-host"></main>
+    <div class="ao3tm-popup-foot">
+      <button type="button" class="ao3tm-btn ao3tm-btn-ghost" id="open-options">在标签页中打开</button>
+      <button type="button" class="ao3tm-btn ao3tm-btn-ghost" id="refresh-page">刷新页面并生效</button>
+    </div>
+    <script src="../lib/storage.js"></script>
+    <script src="../lib/match.js"></script>
+    <script src="../lib/panel.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

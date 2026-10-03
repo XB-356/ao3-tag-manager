@@ -1,0 +1,174 @@
+/* AO3 标签管家 —— 扩展弹窗 / 设置页样式 */
+
+html {
+  height: 100%;
+  /* 表单控件按本扩展的浅色配色渲染，避免继承系统深色导致白底白字 */
+  color-scheme: light;
+}
+
+body.ao3tm-popup {
+  margin: 0;
+  padding: 0;
+  /* 撑满浏览器给弹窗的高度，避免顶部/底部被裁掉；宽度不写死，交给浏览器 */
+  width: 480px;
+  max-width: 100%;
+  height: 100vh;
+  max-height: 600px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #2b2b2b;
+  background: #fff;
+}
+
+body.ao3tm-popup.is-options {
+  width: auto;
+  max-width: none;
+  max-height: none;
+  height: 100vh;
+}
+
+.ao3tm-popup-head {
+  flex: 0 0 auto;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid #eee;
+  background: linear-gradient(180deg, #fffaf7, #fff);
+}
+
+.ao3tm-popup-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #900;
+  letter-spacing: 0.02em;
+}
+
+.ao3tm-popup-site {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #555;
+  line-height: 1.5;
+}
+
+.ao3tm-popup-site.is-muted {
+  color: #999;
+}
+
+.ao3tm-popup-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  padding: 10px 12px 12px;
+}
+
+body.ao3tm-popup.is-options .ao3tm-popup-body {
+  display: block;
+  overflow: auto;
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 16px 24px 32px;
+}
+
+.ao3tm-popup-foot {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 8px 12px;
+  border-top: 1px solid #eee;
+  background: #fafafa;
+}
+
+body.ao3tm-popup.is-options .ao3tm-popup-foot {
+  position: sticky;
+  bottom: 0;
+}
+
+/* 弹窗里的面板铺满可用高度，只让中间内容区滚动 */
+.ao3tm-popup .ao3tm-panel-root {
+  display: block;
+  width: 100%;
+  min-height: 0;
+}
+
+.ao3tm-popup .ao3tm-panel {
+  position: static;
+  display: flex;
+  flex-direction: column;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  box-shadow: none;
+  border: none;
+  border-radius: 0;
+  animation: none;
+}
+
+.ao3tm-popup .ao3tm-panel-head,
+.ao3tm-popup .ao3tm-panel-foot {
+  display: none;
+}
+
+.ao3tm-popup .ao3tm-panel-tabs {
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  border-radius: 8px 8px 0 0;
+  overflow: hidden;
+}
+
+.ao3tm-popup .ao3tm-panel-body {
+  min-height: 0;
+  padding: 12px 2px;
+}
+
+.ao3tm-popup .ao3tm-textarea {
+  min-height: 96px;
+  max-height: 240px;
+}
+
+.ao3tm-popup .ao3tm-add-row .ao3tm-select {
+  flex: 0 0 auto;
+}
+
+.ao3tm-popup .ao3tm-add-row .ao3tm-btn {
+  flex: 0 0 auto;
+}
+
+@media (prefers-color-scheme: dark) {
+  html {
+    color-scheme: dark;
+  }
+
+  body.ao3tm-popup {
+    color: #e6e6e6;
+    background: #232323;
+  }
+
+  .ao3tm-popup-head {
+    background: linear-gradient(180deg, #2c2323, #232323);
+    border-bottom-color: #4a4a4a;
+  }
+
+  .ao3tm-popup-title {
+    color: #ff8080;
+  }
+
+  .ao3tm-popup-foot {
+    background: #2c2c2c;
+    border-top-color: #4a4a4a;
+  }
+
+  .ao3tm-popup-site {
+    color: #b5b5b5;
+  }
+
+  .ao3tm-popup-site.is-muted {
+    color: #8f8f8f;
+  }
+}
