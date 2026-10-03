@@ -200,6 +200,7 @@ src/background.js      右键菜单快捷屏蔽
 src/popup/             扩展弹窗 / 设置页
 test/                  本地测试（端到端 + 解析单测 + 文档截图）
 tools/pack.js          打包成可安装的 zip
+tools/release.js       创建 GitHub Release 并上传 zip
 ```
 
 ## 发布
@@ -210,8 +211,11 @@ tools/pack.js          打包成可安装的 zip
 # 1. 升版本号（manifest.json 里的 version）
 # 2. 打包
 node tools/pack.js
-# 3. 到 GitHub 建 Release，把 dist/ 下的 zip 传上去
+# 3. 建 Release 并上传（凭证取自 GH_TOKEN，或 git 已登录的凭证助手）
+node tools/release.js
 ```
+
+`release.js` 会根据版本号自动生成 tag（如 `v1.0.0`）、写入发布说明、并在附件同名时先删后传。
 
 ### 页面事件桥（给书签小工具用）
 
