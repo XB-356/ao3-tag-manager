@@ -37,12 +37,31 @@
 
 ## 安装
 
-1. 打开 `chrome://extensions/`
-2. 右上角打开「开发者模式」
-3. 点「加载已解压的扩展程序」，选择本目录（含 `manifest.json` 的那一层）
-4. 打开 https://archiveofourown.org/ ，页面上会出现统计条和右下角悬浮按钮
+### 方式一：下载发布包（推荐）
+
+1. 打开 [Releases](https://github.com/XB-356/ao3-tag-manager/releases/latest)，下载 `ao3-tag-manager-v*.zip`
+2. **解压**到任意目录（这个目录别删，扩展会一直从这儿读取）
+3. 打开 `chrome://extensions/` → 右上角开启「开发者模式」
+4. 点「加载已解压的扩展程序」，选择解压出来的文件夹（里面能看到 `manifest.json`）
+5. 打开 https://archiveofourown.org/ ，页面上会出现统计条和右下角悬浮按钮
+
+> 不要把 zip 直接拖进扩展页，Chrome 需要的是解压后的文件夹。
+
+### 方式二：从源码加载
+
+```bash
+git clone https://github.com/XB-356/ao3-tag-manager.git
+```
+
+然后按上面第 3–5 步，加载这个仓库目录即可。
 
 > Edge / Brave 等 Chromium 内核浏览器同理（`edge://extensions/`）。
+
+### 自己打包
+
+```bash
+node tools/pack.js        # 生成 dist/ao3-tag-manager-v<版本>.zip
+```
 
 ## 使用
 
@@ -179,7 +198,19 @@ src/core/content.js    消息响应 + 页面事件桥
 src/core/main.js       入口与 Turbo 页面切换
 src/background.js      右键菜单快捷屏蔽
 src/popup/             扩展弹窗 / 设置页
-test/                  本地端到端测试与截图
+test/                  本地测试（端到端 + 解析单测 + 文档截图）
+tools/pack.js          打包成可安装的 zip
+```
+
+## 发布
+
+改完代码要发新版时：
+
+```bash
+# 1. 升版本号（manifest.json 里的 version）
+# 2. 打包
+node tools/pack.js
+# 3. 到 GitHub 建 Release，把 dist/ 下的 zip 传上去
 ```
 
 ### 页面事件桥（给书签小工具用）
@@ -194,6 +225,30 @@ window.dispatchEvent(
 ```
 
 支持 `ao3tm:state`（当前页统计）、`ao3tm:refresh`、`ao3tm:panel`、`ao3tm:reveal`。
+
+---
+
+## 声明
+
+### 1. 本项目全部由 DeepSeek V4.1 Flash 代工
+
+代码、测试、界面文案、文档（包括这份 README）以及调试过程**全部由 DeepSeek V4.1 Flash 生成**，人类只负责提出需求、试用反馈和最终取舍。因此：
+
+- 架构与实现是模型按需求现推的，不保证是最优解，也可能存在模型自己没想到的边界情况
+- 遇到问题欢迎提 issue，但请理解它更像"AI 写的工具"而不是精雕细琢的作品
+- 任何使用后果请自行判断，尤其是它会影响你实际看到的 AO3 内容
+
+### 2. 效果图仅供展示，不代表作者喜好
+
+README 里的截图使用的是一个**临时编造的测试页面**（内容由模型随手生成，用于验证注入、过滤和各种边界情况），其中出现的作品名、标签、作者名都是**测试用假数据**：
+
+- 这些标签与作品**不代表脚本作者的阅读偏好、立场或推荐**
+- 截图里出现的分级、警告、配对等标签仅为测试匹配逻辑而随意选取
+- 图中的作品并不存在，只是 mock 出来的 DOM
+
+另外，本扩展的过滤规则**完全由使用者自己配置**，默认不含任何屏蔽词；作者不对任何用户配置的规则内容负责。
+
+---
 
 ## 许可
 
