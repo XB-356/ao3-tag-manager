@@ -211,6 +211,17 @@
     'Ascending': '升序',
     'Search people': '搜索用户',
     'Search bookmarks': '搜索书签',
+    // —— 发布页 / 书签页 / 媒体页 ——
+    'Post to Collections / Challenges': '发布到合集 / 挑战',
+    'Recent Bookmarks': '最近的书签',
+    'Latest Bookmarks': '最新书签',
+    'These are some of the latest bookmarks created on the Archive. To find more bookmarks,': '这些是 AO3 上最近创建的一些书签。想找更多书签，',
+    'try our advanced search.': '试试高级搜索。',
+    'choose a fandom': '选择同人圈',
+    'You can search this page by pressing': '你可以按',
+    'and typing in what you are looking for.': '然后输入你要找的内容来搜索本页。',
+    'Post to Collections': '发布到合集',
+    'Collections / Challenges': '合集 / 挑战',
     // —— 修掉"片段替换"残留（整短语收词条，避免半英半中）——
     'AO3 Terms of Service': 'AO3 服务条款',
     'Delete External Work': '删除站外作品',
@@ -874,7 +885,6 @@
     'Bookmark External Work': '收藏站外作品',
     'Are you sure you want to delete this bookmark?': '确定删除这个书签吗？',
     'try our advanced search': '试试高级搜索',
-    'choose a fandom': '选择同人圈',
     'This has been deleted, sorry!': '抱歉，此内容已被删除！',
     // —— 首页 / 通用导航（补充）——
     'My Reading History': '浏览历史',
@@ -1380,7 +1390,13 @@
         return part;
       })
       .join('');
-    return hit ? out : null;
+    if (!hit) return null;
+    // 和 translateInlinePhrases 同样的"结果校验"：
+    // 分段替换后若仍中英夹杂，说明原文是句子/短语而不是可分段界面文案，
+    // 宁可放弃（例如 "Post to Collections / Challenges" 曾被拼成
+    // "发布 to Collections / Challenges"）。
+    if (looksSentenceLike(String(text), out)) return null;
+    return out;
   }
 
   /**
