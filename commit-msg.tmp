@@ -1,26 +1,23 @@
-feat(i18n): 补齐发布作品页与导入作品页（1.2.3.9）
+feat(i18n): 发布页 Summary/Notes 标签 + 站内新闻 + 常见问题界面（1.2.3.10）
 
-按用户新给的两份真实快照补齐。
+1. 发布页 Summary / Notes / at the beginning / at the end 没翻（用户截图红圈）
+   根因：KEEP_USER_CONTENT 里按容器跳过 '#main .notes' 与 '#main .summary'，
+   同一容器里的界面标签（dt 上的 Summary / Notes）被一起挡掉。
+   改为不按容器跳过：用户正文本身在 blockquote / .bio .userstuff 里，仍受保护。
+   （注意不能用宽泛的 '.userstuff'：资料页把 .userstuff 放在 #main 这种大容器上，
+     一刀切会把整页界面文案跳过 —— 中途踩到并回退过。）
 
-发布作品页：
-- This is a translation -> 这是翻译作品
-- Set a different publication date / Set publication date -> 设置（其他）发布日期
-- Basic Formatting -> 基础格式；Type or paste formatted text. -> 输入或粘贴已排版好的文字。
-- Warning -> 警告；Category -> 类别
+2. 发布页其余红圈：
+   Choose a language *（原文带空格）、Public Work Skins、Save Draft、
+   内容长度校验提示（plural characters long）
 
-导入作品页（Import New Work）：
-- Import New Work -> 导入作品
-- Please note! Fanfiction.net, Wattpad.com, and Quotev.com do not allow imports
-  from their sites.（含 and 被替换过的顿号变体，一并兼容）
-- You might find the / Import FAQ / useful.
-- Works URLs -> 作品链接；URLs / URLs* -> 链接 / 链接*
-- URLs for existing work(s) or for the chapters of a single work;
-  one URL per line.
-- Set custom encoding -> 设置自定义编码；Choose a language* -> 选择语言*
-- Post New Work Instead? -> 改为发布新作品？
+3. 站内新闻页（AO3 News）：
+   AO3 News / Tag: / Go 按钮 / RSS Feed / Credits / Details / News Post / Read more
+   注：新闻标题与公告正文属于站点内容，不翻。
 
-新增 tools/audit-ui.js：从真实快照提取"仍是英文的界面文本"，
-自动排除语言名/月份/编码名等不该翻的内容，便于以后按页补词。
+4. 常见问题页（Archive FAQ）：
+   Archive FAQ / Available Categories / Expand Categories / Collapse Categories /
+   TOS FAQ / 开头引导段落的三处片段 / 英文列表提示
+   注：FAQ 的问答正文（577 条）属于帮助文档，按既定原则不翻。
 
 测试：全部套件通过 —— 71/25/50/19/17/15/9 + comment 22/22
-（中途 mock 服务进程挂掉导致两次套件失败，重启后均通过）

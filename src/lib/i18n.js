@@ -158,6 +158,26 @@
     '全部 Fandoms': '全部同人圈',
     'All Subscriptions': '全部订阅',
     'All approved public skins': '所有已通过的公开皮肤',
+    // —— 常见问题页的界面控制（问答正文属于帮助文档，不翻）——
+    'Archive FAQ': '常见问题',
+    'Available Categories': '可用分类',
+    'Expand Categories': '展开分类',
+    'Collapse Categories': '收起分类',
+    'TOS FAQ': '服务条款常见问题',
+    'Some commonly asked questions about the Archive are answered here. Questions and answers about our Terms of Service can be found in the': '这里回答了关于本站的一些常见问题。服务条款相关的问答见',
+    '. You may also like to check out our': '。你也可以看看我们的',
+    '. If you need more help, please': '。如果需要更多帮助，请',
+    'Please consult the English list and check back later for updates.': '请先查看英文列表，稍后再回来看看是否有更新。',
+    // —— 站内新闻列表（AO3 News / admin_posts）——
+    'AO3 News': 'AO3 站内新闻',
+    'Tag:': '标签：',
+    'Go': '筛选',
+    'RSS Feed': 'RSS 订阅',
+    'Credits': '鸣谢',
+    'Details': '详情',
+    'Sort by': '排序方式',
+    'News Post': '新闻帖',
+    'Read more': '阅读全文',
     // —— 合集 / 挑战（来自 collections.*）——
     'Bookmarked Items:': '收录的书签：',
     'Challenges/Subcollections:': '挑战 / 子合集：',
@@ -459,6 +479,26 @@
     'Set custom encoding': '设置自定义编码',
     'Choose a language*': '选择语言*',
     'Post New Work Instead?': '改为发布新作品？',
+    'Import as': '导入为',
+    'Works (limit of 25)': '作品（上限 25）',
+    'Chapters in a single work (limit of 200)': '单篇作品的章节（上限 200）',
+    'Post without previewing.': '发布前不预览。',
+    'Override tags and notes': '覆盖标签与注释',
+    'Set the following tags and/or notes on all works, overriding whatever the importer finds in the content.': '为所有作品设置以下标签和/或注释，覆盖导入器在内容里读到的一切。',
+    'Who can comment on these works': '谁可以评论这些作品',
+    'Submit': '提交',
+    'Import': '导入',
+    'All works on AO3 must comply with our': 'AO3 上的所有作品都必须遵守我们的',
+    'For more information, please refer to our': '更多信息请参考我们的',
+    'Terms of Service FAQ': '服务条款常见问题',
+    'Notes at the beginning': '开头注释',
+    'Notes at the end': '结尾注释',
+    'Choose a language *': '选择语言 *',
+    'Public Work Skins': '公开的作品皮肤',
+    'Save Draft': '保存草稿',
+    'Brevity is the soul of wit, but your content does have to be at least 10 characters long.': '简洁是智慧的灵魂，但内容至少要有 10 个字符。',
+    'Choose Not To Use Archive Warnings': '选择不使用站内警告',
+    'Underage Sex': '未成年人性行为',
     // —— 发布作品页补充 ——
     'This is a translation': '这是翻译作品',
     'Set a different publication date': '设置其他发布日期',
@@ -595,7 +635,6 @@
     'Recent': '最近',
     'Read more...': '阅读全文…',
     'Read more…': '阅读全文…',
-    'Read more': '阅读全文',
     'Tags': '标签',
     'People': '用户',
     'Follow us': '关注我们',
@@ -710,7 +749,6 @@
     // —— 筛选 / 排序 ——
     'Filters': '筛选',
     'Sort and Filter': '排序与筛选',
-    'Sort by': '排序方式',
     'Sort By': '排序方式',
     'Filter': '筛选',
     'Filters:': '筛选：',
@@ -814,6 +852,7 @@
     [/\bNotes:\s*/g, '注释：'],
     [/\bSummary:\s*/g, '摘要：'],
     [/\b(\d[\d,]*)\s+words?\b/gi, '$1 字'],
+    [/\b(\d[\d,]*)\s+characters?\s+left\b/gi, '$1 剩余字符'],
     [/\b(\d[\d,]*)\s+hits?\b/gi, '$1 次点击'],
     [/\b(\d[\d,]*)\s+kudos\b/gi, '$1 个 Kudos'],
     [/\b(\d[\d,]*)\s+comments?\b/gi, '$1 条评论'],
@@ -862,8 +901,11 @@
     '#workskin',
     // 用户自己写的内容（正文 / 简介 / 摘要 / 注记 / 评论）
     'blockquote',
-    '#main .notes',
-    '#main .summary',
+    // 注意：不能按容器 (#main .notes / .summary / .comment) 跳过。
+    // 同一容器里既有用户写的正文，也有界面文案（dt 上的 "Summary"、"Notes" 标签），
+    // 按容器跳过会连标签一起挡掉，表现为"发布页的 Summary / Notes 没翻"。
+    // 但也不能用宽泛的 '.userstuff'：资料页/测试页把 .userstuff 放在 #main 这种
+    // 大容器上，一刀切会把整页界面文案都跳过。所以这里只保留精确的内容选择器。
     '#main .comment',
     '.comment',
     // 注意：**不能**把 .comment-form 整个跳过。
