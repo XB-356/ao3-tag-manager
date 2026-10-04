@@ -1,23 +1,24 @@
-feat(i18n): 发布页 Summary/Notes 标签 + 站内新闻 + 常见问题界面（1.2.3.10）
+feat(i18n): 移除 FAQ 页汉化，改翻头顶引导语；补"关于我们"页面（1.2.3.11）
 
-1. 发布页 Summary / Notes / at the beginning / at the end 没翻（用户截图红圈）
-   根因：KEEP_USER_CONTENT 里按容器跳过 '#main .notes' 与 '#main .summary'，
-   同一容器里的界面标签（dt 上的 Summary / Notes）被一起挡掉。
-   改为不按容器跳过：用户正文本身在 blockquote / .bio .userstuff 里，仍受保护。
-   （注意不能用宽泛的 '.userstuff'：资料页把 .userstuff 放在 #main 这种大容器上，
-     一刀切会把整页界面文案跳过 —— 中途踩到并回退过。）
-
-2. 发布页其余红圈：
-   Choose a language *（原文带空格）、Public Work Skins、Save Draft、
-   内容长度校验提示（plural characters long）
-
-3. 站内新闻页（AO3 News）：
-   AO3 News / Tag: / Go 按钮 / RSS Feed / Credits / Details / News Post / Read more
-   注：新闻标题与公告正文属于站点内容，不翻。
-
-4. 常见问题页（Archive FAQ）：
+1. 移除 FAQ 页汉化（用户要求）
+   AO3 官方已提供简体中文版 FAQ（language_id=zh-Hans），插件再翻会与官中打架，
+   且问答正文属于帮助文档。已删除上一版加入的：
    Archive FAQ / Available Categories / Expand Categories / Collapse Categories /
-   TOS FAQ / 开头引导段落的三处片段 / 英文列表提示
-   注：FAQ 的问答正文（577 条）属于帮助文档，按既定原则不翻。
+   TOS FAQ / Please consult the English list… 等词条。
+
+2. 只保留 FAQ"头顶引导语"的翻译（用户要求）
+   Some commonly asked questions… / . You may also like to check out our /
+   . If you need more help, please
+
+3. 新增"关于我们"（About AO3 and the OTW）页面
+   该页段落被 <a> 链接切碎，按真实节点边界收录：
+   AO3 is built upon the principle of / maximum inclusiveness of fanwork content /
+   Fanworks that do not violate the / or some other part of the /
+   will not be removed from AO3… / AO3 runs on / open-source archiving software /
+   developed by the OTW… / contribute / by working on the unclaimed tasks in our /
+   Jira project / AO3's history on Fanlore / Our Team /
+   Behind the scenes… / committees / , which collaborate… /
+   Accessibility, Design, & Technology / designs, maintains, and develops AO3's code. /
+   AO3 Documentation / creates and maintains AO3's FAQs… / Communications
 
 测试：全部套件通过 —— 71/25/50/19/17/15/9 + comment 22/22
