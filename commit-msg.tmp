@@ -1,26 +1,18 @@
-fix(i18n): 修掉"标题/正文里的单词被莫名替换"（1.2.3-alpha.1）
+fix: 版本号改成 Chrome 合法格式（1.2.3.1），扩展恢复可加载
 
-问题：公告标题、作品标题、正文里出现的普通单词会被替换，例如
-  Characters Haunting the Narrative -> 角色 Haunting the Narrative
-  Next Post -> 下一页 Post
-  tip: arthur merlin words>1000 sort:hits -> …sort:点击
-  The OTW is Recruiting … User Research -> … 用户 Research
-
-根因：translate() 对"像标题/正文/筛选语法"的文本也走分段与内嵌替换，
-词典里任何一条 key 只要出现在文本里就会被替换掉。
+问题：Chrome 的 manifest.version 只接受 1~4 段以点分隔的整数，
+写成 1.2.3-alpha.1 会被判定为非法清单，导致整个扩展加载失败：
+  Required value 'version' is missing or invalid.
+  It must be between 1-4 dot-separated integers each between 0 and 65536.
+所以上一版改完根本没法在 chrome://extensions 重新加载。
 
 改动：
-- 新增 looksLikeRichText()：含 URL、AO3 筛选语法（tip:/sort:）、多句、
-  或超过 60 字且不含已知界面短语的文本，只保留整段精确匹配；
-  含已知界面短语的长句仍然正常翻（欢迎语、条款提示都属这类）
-- 新增 containsKnownPhrase() 用于上面的判断
-- 命中前缀后继续翻译剩余部分，修掉"只翻半句"的文本节点
-- 用 WeakSet 记录已翻译的文本节点，替掉 DOM 标记方案：
-  早先在父元素打标记会让同段落里其余文本节点整体被跳过（半中半英）
-- 移除 User 这类过于通用的词条；补 Previous Post / Next Post / User Research
+- manifest.version: 1.2.3-alpha.1 -> 1.2.3.1（预发布用第四段数字）
+- 新增 tools/check-version.js：按 Chrome 规则校验版本号并给出明确原因
+- tools/pack.js 打包前强制校验版本号，非法直接退出，
+  避免再打出"装不上"的包
 
-测试：
-- 新增 test/i18n-guard.js（23 项）：不该替换的标题/正文/筛选语法 + 必须翻译的界面文案
-- 新增 tools/audit-engine.js：拿真实页面 HTML 离线复核替换行为
-  （公告页复核：可疑替换 1 处，且无实际替换；个人页 0 处）
+验证：
+- check-version.js 对 1.2.3-alpha.1 正确报错，对 1.2.3.1 通过
+- 用 Chrome 实机 load-extension 复验：service worker 正常启动
 - 全部套件通过：71/25/23/19/17/15/9

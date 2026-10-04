@@ -9,6 +9,15 @@ const zlib = require('zlib');
 
 const ROOT = path.resolve(__dirname, '..');
 const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
+
+// 版本号必须在打包前校验：Chrome 只接受 1~4 段数字，
+// 写成 1.2.3-alpha.1 这类会让整个扩展加载失败（踩过一次）。
+if (!/^\d+(\.\d+){0,3}$/.test(String(manifest.version))) {
+  console.error('manifest.version 不合法：' + manifest.version);
+  console.error('Chrome 要求 1~4 段以点分隔的数字（每段 0~65535），不能用 -alpha / -beta 后缀。');
+  console.error('预发布请用第四段，例如 1.2.3.1 / 1.2.3.2。');
+  process.exit(1);
+}
 const version = manifest.version;
 const DIST = path.join(ROOT, 'dist');
 const NAME = 'ao3-tag-manager-v' + version;

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AO3 标签管家 - 屏蔽 / 只看",
-  "version": "1.2.3-alpha.1",
+  "version": "1.2.3.1",
   "default_locale": "zh_CN",
   "description": "在 AO3（含镜像站）上记忆并管理标签与作者的屏蔽 / 只看规则，支持列表内快捷屏蔽、右键标签屏蔽、只看模式与界面汉化。",
   "icons": {
