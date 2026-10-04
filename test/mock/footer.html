@@ -8,18 +8,36 @@
   <body>
     <div id="header"><strong>Archive of Our Own</strong></div>
     <div id="main" role="main">
-      <!-- 评论表单（结构与真实 AO3 一致：外层 form.comment-form 就是漏翻的元凶） -->
-      <form class="comment-form" id="comments_placeholder_for_test" action="/comments" method="post">
-        <fieldset>
-          <legend>Post Comment</legend>
-          <p class="notice">This work's creator has chosen to moderate comments on the work. Your comment will not appear until it has been approved by the creator.</p>
-          <h4 class="heading">Comment as <span class="byline">XB356</span></h4>
-          <p class="footnote">Plain text with limited HTML <a class="help symbol question modal" aria-label="Html help" href="/help/html"><span class="symbol question"><span>?</span></span></a></p>
-          <textarea id="comment_content" name="comment[comment_content]"></textarea>
-          <span role="alert" class="LV_validation_message LV_invalid">Brevity is the soul of wit, but we need your comment to have text in it.</span>
-          <p class="submit actions"><input type="submit" value="Comment" class="button"></p>
-        </fieldset>
-      </form>
+      <!-- 评论表单：结构与真实 AO3 完全一致。
+           关键：外层是 <div class="post comment" id="comment_form_for_*">，
+           会被 KEEP_USER_CONTENT 的 '.comment' 命中（这正是线上漏翻的原因）。 -->
+      <div id="add_comment_placeholder" title="top level comment">
+        <div id="add_comment">
+          <div class="post comment" id="comment_form_for_243388076">
+            <form class="new_comment" id="comment_for_243388076" action="/chapters/243388076/comments" method="post">
+              <fieldset>
+                <legend>Post Comment</legend>
+                <p class="notice">This work's creator has chosen to moderate comments on the work. Your comment will not appear until it has been approved by the creator.</p>
+                <h4 class="heading">Comment as <span class="byline">XB356</span></h4>
+                <p class="footnote">Plain text with limited HTML <a class="help symbol question modal" aria-label="Html help" href="/help/html"><span class="symbol question"><span>?</span></span></a></p>
+                <p>
+                  <label for="comment_content" class="landmark">Comment</label>
+                  <textarea id="comment_content" class="comment_form observe_textlength" title="Enter Comment" name="comment[comment_content]"></textarea>
+                  <span role="alert" class="LV_validation_message LV_invalid">Brevity is the soul of wit, but we need your comment to have text in it.</span>
+                </p>
+                <p class="character_counter"><span class="value" data-maxlength="10000">10000</span> characters left</p>
+                <p class="submit actions"><input type="submit" value="Comment" class="button"></p>
+              </fieldset>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- 用户自己写的评论：一个字都不能被翻译 -->
+      <div id="user_comment_box" class="post comment" role="article">
+        <h4 class="heading"><a href="/users/someone">someone</a></h4>
+        <p class="userstuff">USER WRITTEN COMMENT MUST NOT BE TRANSLATED: Characters Haunting the Narrative and Tags</p>
+      </div>
 
       <!-- 与真实 AO3 页脚一致的节点结构 -->
       <footer id="footer" role="contentinfo">
@@ -48,6 +66,5 @@
         </div>
       </footer>
     </div>
-    <div id="footer">footer</div>
   </body>
 </html>

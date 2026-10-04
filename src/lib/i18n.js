@@ -60,6 +60,8 @@
     'Kudos': 'Kudos',
     'Comments': '评论',
     'Comment': '评论',
+    'characters left': '剩余字符',
+    'Enter Comment': '输入评论',
     'Language': '语言',
     'Rating': '分级',
     'Warnings': '警告',
@@ -379,7 +381,6 @@
     'Anonymous Creator': '匿名创作者',
     'Choose Name': '选择署名',
     'Comment as': '评论身份',
-    'Enter Comment': '输入评论',
     'Guest email (required)': '访客邮箱（必填）',
     'Please enter your email address.': '请输入你的邮箱地址。',
     'Please enter your name.': '请输入你的名字。',
@@ -889,7 +890,10 @@
   function shouldSkip(node, bilingual) {
     const el = node.nodeType === 1 ? node : node.parentElement;
     if (!el) return true;
-    if (el.closest(SKIP_SELECTOR)) return true;
+    // 评论表单是例外：它外层带 .comment，但里面全是界面文案，要放行
+    const inSkip = el.closest(SKIP_SELECTOR) || null;
+    const isForm = isCommentForm(el);
+    if (inSkip && !isForm) return true;
     if (SKIP_TEXT_TAGS[el.tagName]) return true;
     // 已翻过的文本节点用 WeakSet 记录：
     // 不要用 DOM 标记判断——早先在父元素上打标记会把同段落里其它文本节点
@@ -920,7 +924,32 @@
   function shouldSkipAttr(el) {
     if (!el || !el.getAttribute) return true;
     if (ATTR_SKIP[el.tagName]) return true;
-    if (el.closest(KEEP_USER_CONTENT)) return true;
+    if (el.closest(KEEP_USER_CONTENT) && !isCommentForm(el)) return true;
+    return false;
+  }
+
+  /**
+   * 评论表单：AO3 把它包在 <div class="post comment" id="comment_form_for_*"> 里，
+   * 会被 KEEP_USER_CONTENT 的 '.comment' 命中而整块跳过，
+   * 导致 Post Comment / Comment as / Plain text with limited HTML / 评论审核提示
+   * 永远不翻。这里精确识别这块，放行它的界面文案；
+   * 真正由用户书写的评论仍在 '.comment' / '.userstuff' 保护下。
+   */
+  function isCommentForm(el) {
+    if (!el || !el.closest) return false;
+    // 表单容器本身（含 #add_comment_placeholder 外壳）
+    if (el.closest('#add_comment, #add_comment_placeholder')) return true;
+    if (el.closest('form.new_comment, form.comment-form')) return true;
+    // <div class="post comment" id="comment_form_for_…">
+    const holder = el.closest('div.comment');
+    if (holder) {
+      const id = holder.getAttribute ? holder.getAttribute('id') || '' : '';
+      if (id.indexOf('comment_form') === 0) {
+        // 只放行表单元素，不动用户评论正文
+        if (el.closest('textarea, .userstuff, blockquote, .comment .comment')) return false;
+        return true;
+      }
+    }
     return false;
   }
 

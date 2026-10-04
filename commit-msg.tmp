@@ -1,0 +1,30 @@
+fix(i18n): 真正修好评论区（元凶是外层 .comment），并补评论表单文案（1.2.3.6）
+
+用户第 N 次反馈："还是没有翻译评论区"——这次拿到刷新后的快照，找到了真元凶。
+
+真因：AO3 把评论表单包在
+    <div class="post comment" id="comment_form_for_243388076">
+      <form class="new_comment" …>
+里，外层 div 带 comment 类，被 KEEP_USER_CONTENT 的 '.comment' 命中而整块跳过。
+于是 Post Comment / Comment as / Plain text with limited HTML / 评论审核提示
+全部一个字都翻不了。
+
+上一版我以为元凶是 '.comment-form'（本地 mock 用的就是那个类），
+结果线上表单的类名是 new_comment，所以"本地测试通过、线上仍然漏翻"。
+
+修法：
+- 新增 isCommentForm()：精确识别评论表单区域
+  （#add_comment / #add_comment_placeholder / form.new_comment /
+   div.comment[id^=comment_form]），只放行其中的界面文案
+- shouldSkip / shouldSkipAttr 里对这个区域开例外
+- 用户真正写的评论仍在 '.comment' / '.userstuff' / textarea 保护下，一字不改
+
+顺带：
+- 补 'characters left' -> '剩余字符'、'Enter Comment' -> '输入评论'
+  （原先 'Characters' 把 "10000 characters left" 里的 characters 替换成"角色"）
+- 测试页 mock 改为与线上完全一致的结构（div.post.comment > form.new_comment）
+
+测试：
+- 新增 test/i18n-comment.js：真实浏览器验证评论区 + 用户评论不被翻译 + 页脚
+  （10/10 通过，含"用户评论正文一字未改"反向断言）
+- 全部套件：71/25/50/19/17/15/9 + comment 10/10
