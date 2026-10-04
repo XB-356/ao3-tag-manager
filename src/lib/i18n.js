@@ -1340,6 +1340,20 @@
     const trimmed = original.trim();
     if (!trimmed) return false;
 
+    // 特例：AO3 在「关于我们」页把首段的定冠词单独切成了一个文本节点：
+    //     <p> The <a>Archive of Our Own</a> (AO3) is a non-profit…</p>
+    // 中文里没有对应词，直接把这个孤立的 "The" 去掉，免得出现
+    // "The AO3（Archive of Our Own）（AO3）是一个非营利…" 这种半英半中。
+    // 严格限定"前一个兄弟是链接、且原文就是 The/the"，避免误伤作品标题。
+    if (/^(The|the)$/.test(trimmed) && node.previousSibling && node.previousSibling.nodeType === 1) {
+      const prevTag = node.previousSibling.tagName;
+      if (prevTag === 'A' || prevTag === 'CITE' || prevTag === 'EM' || prevTag === 'STRONG') {
+        doneNodes.add(node);
+        node.nodeValue = ' '; // 保留一个空格，中文才会和链接分开
+        return true;
+      }
+    }
+
     // 用 lookupWithKey 拿到"命中的是原文里的哪一段"，
     // 剩余部分要按**原文的字符位置**切，不能按译文长度切——
     // 按译文长度切会把英文尾巴切错（曾导致 "Donate or Volunteer"
@@ -1379,7 +1393,11 @@
     const leading = original.match(/^\s*/)[0];
     const trailing = original.match(/\s*$/)[0];
     // 译文以中文收尾时，后面的西文空格要去掉
-    const value = leading + next + (/[\u4e00-\u9fa5]\s*$/.test(next) ? trailing.replace(/^\s+/, '') : trailing);
+    let value = leading + next + (/[\u4e00-\u9fa5]\s*$/.test(next) ? trailing.replace(/^\s+/, '') : trailing);
+    // 译文以中文开头时，前面留一个空格：
+    // AO3 大量 "链接</a> imports at-risk…" 这类结构，纯排版需要这个空格，
+    // 否则中文会紧贴在链接上（用户反馈的 "Open Doors（开放之门），把濒危…"）
+    if (/^[\u4e00-\u9fa5]/.test(next) && !/^\s/.test(value)) value = ' ' + value;
     const el = node.parentElement;
 
     // 只记录"这一个文本节点"已翻译。

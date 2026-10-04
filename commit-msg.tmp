@@ -1,22 +1,21 @@
-fix(i18n): 补上"关于我们"页漏掉的整段正文（1.2.3.13）
+fix(i18n): 处理"关于我们"页孤立的 The + 译文前导空格（1.2.3.14）
 
-用户反馈"你翻译了个啥"——截图显示两处整段仍是英文：
-  1. 开头介绍段 "The Archive of Our Own (AO3) is a non-profit, non-commercial…"
-  2. Legal Advocacy / Open Doors 两条项目说明
-  3. "For questions or reports about violations of the AO3…contact Communications"
+用户圈出首段显示 "The AO3（Archive of Our Own）（AO3）是一个非营利…"。
 
-根因：这些整段是以**空格/小写字母开头**的文本节点（<p> 开头有个空格节点，
-文字节点从 " (AO3) is a non-profit…" 开始），我的审计脚本按"首字母大写"过滤，
-没把它们列出来，于是漏收。
-另外首段 key 我写成了带前导空格的版本，导致整段匹配不上。
+根因：AO3 把首段的定冠词单独切成了一个文本节点：
+    <p> The <a>Archive of Our Own</a> (AO3) is a non-profit…</p>
+  · " The " 是独立节点，中文里没有对应词
+  · 后半段节点译文以中文开头、又没有前导空格，于是中文紧贴链接
 
 改动：
-- 按真实节点边界收录首段（key 去掉前导空格，译文保留前导空格）
-- 补 addresses questions and reports about potential violations of the AO3
-- 补 Legal Advocacy 说明：which is committed to protecting and defending fanworks…
-- 补 Open Doors 说明：which offers shelter to at-risk fannish projects…
-- 补 For questions or reports about violations of the AO3 / contact Communications
-- 移除误加的 'The'（单独一个 The 不该翻）与重复的 Archive of Our Own
+- translateTextNode 增加特例：当节点内容恰为 The/the、且**前一个兄弟是
+  a/cite/em/strong 元素**时，把它替换为一个空格（去掉英文、保留间距）。
+  严格限定结构，避免误伤 "The Big Bang…"/"The Hobbit"/"The OTW is Recruiting…"
+  这类标题 —— 已加 5 条反向断言。
+- 译文以中文开头且原文有前导空白时，补一个空格，修
+  "Open Doors（开放之门），把濒危…" 这种紧贴链接的排版。
 
-验证：首段已整段译为"（AO3）是一个非营利、非商业的同人作品存档站…"
-测试：全部套件通过 —— 71/25/50/19/17/15/9 + comment 22/22
+测试：
+- 新增 test/i18n-the.js（9 项）：5 条"含 The 的标题不得被动" +
+  首段后半句整段翻译 + Open Doors 说明等
+- 全部套件：71/25/50/9(the)/19/17/15/9 + comment 22/22
