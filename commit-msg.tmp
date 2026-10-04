@@ -1,25 +1,31 @@
-fix(i18n): 多义词（Top/Last/Or）不再被片段替换 + 绝不翻译插件自身控件（1.2.3.19）
+feat(i18n): 补浏览历史/收件箱/任务/领取/合集/统计页文案（1.2.3.20）
 
-用户反馈三处：
-1. "Top" 全部被替换成"回到顶部"，导致 AO3 的攻受标签
-   （<span class="ao3tm-tag" data-tag="Top Park Jongseong | Jay">）被破坏
-2. "或" 异常替换仍在（作品标题 "By Choice, by Fate, or Neither"）
-3. "Last" 多义（"Last visited:" 被替换成 "末页 visited:"）
+用户报的几页一起补：
 
-根因与修法：
-- Top / top / Last / last / Or / or 全部列入 EXACT_ONLY：
-  只允许"整段完全相等"时翻译，绝不参与分段与内嵌替换
-- 移除 'Last' -> '末页'、'Or' -> '或' 这两条危险的单词词条
-- 新增 'Last visited:' -> '最近浏览：'（按整段翻译）
-- 【关键】shouldSkip 增加"插件自身控件一律跳过"：
-  el.closest('[class*="ao3tm-"]') 直接跳过，并把 .ao3tm-tag / .ao3tm-hide /
-  .ao3tm-chip 加进 KEEP_USER_CONTENT。
-  这些控件里存着标签原文（data-tag），被翻就会破坏标签
+浏览历史（时间显示）
+- Clear Entire History -> 清空全部浏览历史
+- Delete from History -> 从浏览历史中删除
+- Marked for Later -> 标记为稍后阅读
+- Last visited: -> 最近浏览：；List of History Items -> 浏览历史列表
+- 模式：「Visited 44 times」->「已浏览 44 次」，「Visited once」->「已浏览 1 次」
+- 模式：日期「04 Oct 2026」->「2026 年 10 月 4 日」
+  **注意排除带时间的戳**（"Fri, 02 Oct 2026 07:14PM UTC" 原样保留，
+  否则公告里的时间会被改得别扭），已加回归断言
+- 模式：「(Latest version.)」->「（最新版本。）」
 
-测试：
-- 新增 test/i18n-homograph.js（12 项）：
-  9 条"多义词在用户内容里不得被动"（Top/Bottom 攻受标签、含 or 的标题、
-  Top Gun、Last Night…、Or Else、单独的 Top/Last/Or）
-  + 3 条"界面文案照翻"（↑ Top / Last visited: / Donate or Volunteer）
-- 全部套件：71/25/50/19/17/15/9 + 9(the) + 12(homograph) + comment 22/22 + about 5/5
-  （theme-i18n 并发跑偶发失败，单跑 19/19）
+收件箱
+- My Inbox -> 我的收件箱
+- 模式：My Inbox (2 comments, 1 unread) -> 我的收件箱（2 条评论，1 条未读）
+- Filter by read / Filter by replied to / Show without replies / Sort by date /
+  Newest first / Oldest first
+
+挑战任务 / 领取
+- My Assignments / Unposted Assignments / My Claims
+- Unfulfilled Claims -> 未完成的领取；Fulfilled Claims -> 已完成的领取
+- 两句引导语（prompt meme / gift exchange）
+
+合集 / 统计
+- 模式："XB356's Collections" -> "XB356 的合集"
+- 统计页两段说明整句
+
+测试：全部套件通过 —— 71/25/50/19/17/15/9 + 9(the) + 12(homograph) + comment 22/22 + about 5/5

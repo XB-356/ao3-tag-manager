@@ -69,7 +69,39 @@
     // 浏览历史页：Last visited 的 Last 是"最近/末次"，不能按单词替换
     'Last visited:': '最近浏览：',
     'Last visited': '最近浏览',
+    // —— 收件箱（Inbox）筛选与排序 ——
+    'My Inbox': '我的收件箱',
+    'Filter by read': '按已读状态筛选',
+    'Filter by replied to': '按是否回复筛选',
+    'Show without replies': '显示未回复的',
+    'Show replied to': '显示已回复的',
+    'Sort by date': '按日期排序',
+    'Newest first': '最新在前',
+    'Oldest first': '最早在前',
+    'unread': '未读',
+    'Mark as read': '标记为已读',
+    'Mark as unread': '标记为未读',
+    // —— 挑战任务（Challenge Assignments）——
+    'My Assignments': '我的任务',
+    'Unposted Assignments': '未发布的任务',
+    'My Claims': '我的领取',
+    'Looking for prompts you claimed in a prompt meme? Try': '在找你在点梗活动里领取的题目？试试',
+    'Unfulfilled Claims': '未完成的领取',
+    'Fulfilled Claims': '已完成的领取',
+    'Looking for assignments you were given for a gift exchange? Try': '在找礼物交换分配给你的任务？试试',
+    // —— 统计页说明 ——
+    'You currently have no works posted to the Archive. If you add some, you\'ll find information on this page about hits, kudos, comments, and bookmarks of your works.': '你目前还没有在 AO3 上发布任何作品。发布之后，这一页会显示你作品的点击、Kudos、评论与书签数据。',
+    'Users can also see how many subscribers they have, but not the names of their subscribers or identifying information about other users who have viewed or downloaded their works.': '你还能看到自己的订阅者数量，但看不到订阅者是谁，也看不到浏览或下载过你作品的其他用户的身份信息。',
+    'Statistics': '统计',
     'Visited': '浏览过',
+    // —— 浏览历史页 ——
+    'Clear Entire History': '清空全部浏览历史',
+    'Delete from History': '从浏览历史中删除',
+    'List of History Items': '浏览历史列表',
+    'History': '浏览历史',
+    'Recent': '最近',
+    '(Latest version.)': '（最新版本。）',
+    'Latest version': '最新版本',
     'Manage My Pseuds': '管理我的笔名',
     'Delete My Account': '删除我的账号',
     'characters left': '剩余字符',
@@ -710,7 +742,6 @@
     // —— 首页 / 通用导航（补充）——
     'My Reading History': '浏览历史',
     'Reading History': '浏览历史',
-    'Recent': '最近',
     'Read more...': '阅读全文…',
     'Read more…': '阅读全文…',
     'Tags': '标签',
@@ -753,7 +784,6 @@
     'Kudos Received': '收到的 Kudos',
     'Kudos Received:': '收到的 Kudos：',
     'Subscriptions': '订阅',
-    'History': '浏览历史',
     'Dashboard': '主页',
     'Manage Pseuds': '管理笔名',
     'Edit Preferences': '编辑偏好设置',
@@ -929,6 +959,28 @@
     [/\bSummary:\s*/g, '摘要：'],
     [/\b(\d[\d,]*)\s+words?\b/gi, '$1 字'],
     [/\b(\d[\d,]*)\s+characters?\s+left\b/gi, '$1 剩余字符'],
+    // 浏览历史页的时间文案："Visited 44 times" / "Visited once"
+    [/\bVisited\s+(\d[\d,]*)\s+times?\b/gi, '已浏览 $1 次'],
+    [/\bVisited\s+once\b/gi, '已浏览 1 次'],
+    // 历史页那句里的括号版本标记（整段里长度不够，字典查不到，用模式补）
+    [/\(Latest version\.\)/gi, '（最新版本。）'],
+    [/\(Latest version\)/gi, '（最新版本）'],
+    // 收件箱标题："My Inbox (2 comments, 1 unread)"（数字是变量）
+    [/\bMy Inbox\s*\(\s*(\d[\d,]*)\s*comments?\s*,\s*(\d[\d,]*)\s*unread\s*\)/gi,
+      '我的收件箱（$1 条评论，$2 条未读）'],
+    [/\bMy Inbox\b/gi, '我的收件箱'],
+    [/\b(\d[\d,]*)\s*comments?\s*,\s*(\d[\d,]*)\s*unread\)?/gi, '$1 条评论，$2 条未读）'],
+    // "XB356's Collections" 这类带用户名的标题（集合页/统计页等）
+    [/([A-Za-z0-9_-]+)&#39;s Collections\b/g, '$1 的合集'],
+    [/([A-Za-z0-9_-]+)'s Collections\b/g, '$1 的合集'],
+    // 日期："04 Oct 2026" -> "2026 年 10 月 4 日"（月份用数字，避免二次替换）
+    // 注意：必须排除带时间戳的形式（"Fri, 02 Oct 2026 07:14PM UTC"），
+    // 那类属于站点动态格式，硬翻会读起来别扭，也会破坏已有排版。
+    [/(^|[^A-Za-z0-9])(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sept|Sep|Oct|Nov|Dec)\s+(\d{4})\b(?!\s+\d{1,2}:\d{2})/g,
+      function (all, pre, d, mon, y) {
+        const map = { Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6, Jul: 7, Aug: 8, Sept: 9, Sep: 9, Oct: 10, Nov: 11, Dec: 12 };
+        return pre + y + ' 年 ' + map[mon] + ' 月 ' + Number(d) + ' 日';
+      }],
     [/\b(\d[\d,]*)\s+hits?\b/gi, '$1 次点击'],
     [/\b(\d[\d,]*)\s+kudos\b/gi, '$1 个 Kudos'],
     [/\b(\d[\d,]*)\s+comments?\b/gi, '$1 条评论'],

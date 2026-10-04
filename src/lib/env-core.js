@@ -89,7 +89,7 @@
 
   root.AO3TM = root.AO3TM || {};
   // 构建标记：排查"浏览器里跑的到底是不是最新代码"（与 manifest.version 保持一致）
-  root.AO3TM.BUILD = '1.2.3.19';
+  root.AO3TM.BUILD = '1.2.3.20';
 
   root.AO3TM.envGlobal = {
     mode: mode,
