@@ -1,0 +1,26 @@
+feat(i18n): 补齐发布作品页与导入作品页（1.2.3.9）
+
+按用户新给的两份真实快照补齐。
+
+发布作品页：
+- This is a translation -> 这是翻译作品
+- Set a different publication date / Set publication date -> 设置（其他）发布日期
+- Basic Formatting -> 基础格式；Type or paste formatted text. -> 输入或粘贴已排版好的文字。
+- Warning -> 警告；Category -> 类别
+
+导入作品页（Import New Work）：
+- Import New Work -> 导入作品
+- Please note! Fanfiction.net, Wattpad.com, and Quotev.com do not allow imports
+  from their sites.（含 and 被替换过的顿号变体，一并兼容）
+- You might find the / Import FAQ / useful.
+- Works URLs -> 作品链接；URLs / URLs* -> 链接 / 链接*
+- URLs for existing work(s) or for the chapters of a single work;
+  one URL per line.
+- Set custom encoding -> 设置自定义编码；Choose a language* -> 选择语言*
+- Post New Work Instead? -> 改为发布新作品？
+
+新增 tools/audit-ui.js：从真实快照提取"仍是英文的界面文本"，
+自动排除语言名/月份/编码名等不该翻的内容，便于以后按页补词。
+
+测试：全部套件通过 —— 71/25/50/19/17/15/9 + comment 22/22
+（中途 mock 服务进程挂掉导致两次套件失败，重启后均通过）
