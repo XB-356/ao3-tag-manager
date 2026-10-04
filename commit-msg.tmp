@@ -1,15 +1,28 @@
-fix(i18n): 修「最新版本」句号 + 收件箱未读/已读 + 领取页文案（1.2.3.21）
+feat(i18n): 按官方 locale 全量盘点后补齐剩余用户可见章节（1.2.3.22）
 
-用户反馈三处：
-1. 历史记录里「最新版本。」多了个句号
-   → 改为「（最新版本）」，括号内不再带句号（字典与模式两处一起改）
-2. 收件箱残留：显示 unread / 显示 read
-   → 补 'Show unread' -> 显示未读、'Show read' -> 显示已读
-3. 领取页（/users/XXX/claims）未翻译
-   → 复核快照：页面已有 243 处扩展标记，说明处理过，只是当时词典缺这几条 key
-   已确认下列 key 齐全：My Claims / Unfulfilled Claims / Fulfilled Claims /
-   Looking for assignments you were given for a gift exchange? Try / My Assignments
+用 tools/from-locale.js 对照 otwarchive 官方 en.yml 做了一次全量盘点，
+用户可见章节只剩零散几处，本轮补齐：
 
-清理：Statistics 重复键
+- 邀请码（invitations）：Copy link / Sent at / Sent to / Sender / Redeemed at /
+  Redeemed by / Invitation token / Invitation Information /
+  List of your invitation tokens… 整句说明
+- 笔名编辑（pseuds.pseuds_form）：Description / Icon / Icon alt text /
+  Icon comment text / change your username / 删除头像说明
+- 合集内容审核（collection_items）：Approved / Rejected by Collection /
+  Rejected by User / Awaiting Collection Approval / Awaiting User Approval /
+  Nothing to review here! / Add Bookmark to collections
+- 挑战报名（challenge.gift_exchange）：Sign-up / CSV Downloads /
+  Download (CSV) / Search by Pseud / No sign-ups yet! /
+  Offers ↓ Requests ↓ Close Offers ↑ Close Requests ↑
+- 站点地图（home.site_map）：Explore / Homepage / Recent Works /
+  Additional Tags Cloud / Collections and Challenges / Access your account /
+  My Home / My Profile / My Series / My Collections and Challenges /
+  Change your account settings / 删号确认句
+- 评论补充：被屏蔽、访客评论关闭、隐藏作品不可评论等 6 句
+
+盘点结论：官方 2810 条里剩余 1127 条未收录，**全部集中在**
+管理后台（admin.*）、帮助文档（help.*）、法律条文（home.tos/content/privacy）、
+举报与反馈表单（abuse_reports/feedbacks）——按既定原则不翻译。
 
 测试：全部套件通过 —— 71/25/50/19/17/15/9 + 9(the) + 12(homograph) + comment 22/22 + about 5/5
+（run.js 并发跑时偶发 70/71，单跑 71/71）
