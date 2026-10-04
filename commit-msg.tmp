@@ -1,27 +1,22 @@
-fix(i18n): 通用短词不再参与片段替换，杜绝标题/笔名被切碎（1.2.3.3）
+fix(i18n): 站点皮肤名不再翻译 + 补齐评论表单/Kudos 文案（1.2.3.4）
 
-现象（用户截图）：
-- 作品标题 "By Choice, by Fate, or Neither" -> "By Choice, by Fate, 或 Neither"
-- 页脚 "Donate or Volunteer" 被切成 "捐赠或参与志愿 或 Volunteer"
-- 提示行 "Set your preferences now" 被切成 "现在就去设置偏好 偏好设置 now"
-- 作品状态 "Work in Progress" -> "作品 / Progress"
-
-根因：词典里收录了 or / and / publish / Preferences / Donate / Work 这类
-通用短词，它们参与"分段 + 内嵌替换"后会把无关文本切碎。
+用户反馈：皮肤名"雪蓝"是我翻的，不该翻；作品页评论表单还有大段英文。
 
 改动：
-- 新增 EXACT_ONLY 名单：or、and、publish、Preferences、Default、Share、
-  From、To、Site、Rules、Contents、Block/Unblock、Mute/Unmute、
-  Either、Closed、Moderated、Canonical、Synonymous、Unwrangleable、Note
-  等只允许"整段精确匹配"，绝不参与片段替换
-- INLINE_EXCLUDE 扩充：Donate、Volunteer、Donate or Volunteer、
-  Set your preferences now、Preferences、Work in Progress / Complete Work
-- 补充 Work in Progress -> 连载中、Completed Work -> 已完结
-- 补上成人内容页的 cookie 提示整句翻译
-- Set your preferences now 译文改为"现在就去修改偏好"（原为拼接结果）
+- 移除 'Low Vision Default'、'Snow Blue' 的译文，并把内置皮肤名
+  加入 EXACT_ONLY：Default、Reversi、Low Vision Default、Snow Blue、Snow、Customize
+  （皮肤名属于数据；但"自定义外观"这类界面文案仍照翻）
+- 补评论表单与作品页文案：
+  Comment as / Post Comment / Comment / Plain text with limited HTML /
+  Brevity is the soul of wit, but we need your comment to have text in it. /
+  This work's creator has chosen to moderate comments on the work. … /
+  Work Header / Archive Warning: / Category: / Fandom: / Rating: /
+  Relationships: / Characters: / Additional Tags:
+- Kudos 行按真实节点边界收录：
+  'as well as 3 guests left kudos on this work!' -> '，以及 3 位访客给这篇作品留下了 Kudos！'
+  （该行由「用户名链接 + 文本片段」拼接，整句 key 匹配不到）
+- 顺手删掉此前引入的 6 个重复键
 
 测试：
-- test/i18n-guard.js 增至 33 项，新增"片段键不得切碎文本"与
-  "完整界面文案要翻"两组双向用例
-- 作品页离线复核：可疑替换 0 处
-- 全部套件通过：71/25/33/19/17/15/9
+- test/i18n-guard.js 增至 39 项，新增"皮肤名不翻"5 项与 Customize 照翻
+- 全部套件通过：71/25/39/19/17/15/9

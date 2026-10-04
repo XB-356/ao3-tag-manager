@@ -97,6 +97,15 @@ fullUi.forEach(([text, want]) => {
   check('完整界面文案要翻：' + JSON.stringify(text), out === want, out);
 });
 
+/** 站点皮肤名属于数据，一律不翻（用户明确要求：雪蓝那类不该被翻译） */
+const skinNames = ['Snow Blue', 'Low Vision Default', 'Reversi', 'Default', 'Snow'];
+skinNames.forEach((text) => {
+  const out = i18n.translate(text);
+  check('皮肤名不翻：' + JSON.stringify(text), out === text, out);
+});
+/** 但"自定义外观"这种界面文案照翻 */
+check('界面文案照翻：Customize', i18n.translate('Customize') === '自定义外观', i18n.translate('Customize'));
+
 console.log('\n===== 结果 =====');
 console.log(results.length - failed + '/' + results.length + ' 通过');
 process.exit(failed ? 1 : 0);
