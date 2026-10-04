@@ -37,7 +37,13 @@ const mustNotChange = [
   'September 2026',
   'All About Eve',
   'Lazy Town',
-  'Angels'
+  'Angels',
+  // 同人圈/系列列表条目（PATTERNS 曾把 "Series" 换成 "个系列"）
+  'The 100 Series - Kass Morgan',
+  'The 100 Series',
+  '100 Cupboards Series - N. D. Wilson',
+  '1-800-WHERE-R-U Series - Meg Cabot',
+  '13 Treasures Series - Michelle Harrison'
 ];
 
 mustNotChange.forEach((text) => {

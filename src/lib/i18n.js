@@ -240,6 +240,13 @@
     'Is it later already?': '已经是稍后了吗？',
     'Some works you\'ve marked for later.': '你标记为稍后阅读的一些作品。',
     'Search and Browse FAQ': '搜索与浏览常见问题',
+    // —— 搜索结果页 ——
+    'Search Results': '搜索结果',
+    'Edit Your Search': '编辑搜索条件',
+    'Your Search': '搜索条件',
+    'You searched for:': '你搜索了：',
+    'Found': '找到',
+    'results': '条结果',
     'You can have one icon for each pseud.': '每个笔名可以设置一个头像。',
     // —— 修掉"片段替换"残留（整短语收词条，避免半英半中）——
     'AO3 Terms of Service': 'AO3 服务条款',
@@ -1122,6 +1129,14 @@
     [/\(Latest version\)/gi, '（最新版本）'],
     // 搜索框提示：只翻开头的 "tip:" 标签，后面的示例查询原样保留
     [/^\s*tip:\s*/i, '提示：'],
+    // 搜索结果页："You searched for: xxx sort by: yyy descending"
+    [/\bYou searched for:\s*/gi, '你搜索了：'],
+    [/\bsort by:\s*/gi, '排序：'],
+    [/\bbest match\b/gi, '最佳匹配'],
+    [/\bdescending\b/gi, '降序'],
+    [/\bascending\b/gi, '升序'],
+    [/\b(\d[\d,]*)\s+Found\b/g, '找到 $1 条'],
+    [/\b(\d[\d,]*)\s+results?\b/gi, '$1 条结果'],
     // 收件箱标题："My Inbox (2 comments, 1 unread)"（数字是变量）
     [/\bMy Inbox\s*\(\s*(\d[\d,]*)\s*comments?\s*,\s*(\d[\d,]*)\s*unread\s*\)/gi,
       '我的收件箱（$1 条评论，$2 条未读）'],
@@ -1186,6 +1201,24 @@
     '#workskin',
     // 用户自己写的内容（正文 / 简介 / 摘要 / 注记 / 评论）
     'blockquote',
+    // —— 用户数据：同人圈 / 作品 / 标签列表 ——
+    // 这些名称是用户产生的数据，**一个字都不能改**。
+    // 曾出现 "The 100 Series -> The 100 个系列"、"All About Eve -> 全部 About Eve"
+    // （片段替换与 PATTERNS 都会误伤），所以按容器整块跳过。
+    'ul.fandom',
+    'ul.fandoms',
+    '.fandom.index',
+    '.fandoms.index',
+    'ul.tag',
+    '.tag.index',
+    'ul.work.index',
+    '.work.blurb',
+    'li.blurb',
+    '.bookmark.blurb',
+    '.series.blurb',
+    '.collection.blurb',
+    '.summary.module',
+    '.tag.set',
     // 注意：不能按容器 (#main .notes / .summary / .comment) 跳过。
     // 同一容器里既有用户写的正文，也有界面文案（dt 上的 "Summary"、"Notes" 标签），
     // 按容器跳过会连标签一起挡掉，表现为"发布页的 Summary / Notes 没翻"。
@@ -1596,6 +1629,24 @@
     return false;
   }
 
+  /**
+   * 这段文本像不像"用户数据"（同人圈名 / 作品名 / 系列名 / 标签名）。
+   * 典型特征：含"数字 + Series"、以 The 开头且带序号、含 - 作者分隔等。
+   * 这类文本不做任何替换（含 PATTERNS），避免把名称改坏。
+   */
+  function looksLikeUserData(text) {
+    const v = String(text || '').trim();
+    if (!v) return false;
+    // 1) "名称 - 作者" 这种列表条目形态（系列/作品列表几乎都是这个形状）
+    if (/ - [A-Z(]/.test(v) && v.length < 140) return true;
+    // 2) "<数字> Series/Trilogy/Saga"（AO3 上大量系列名长这样）
+    if (/\d[\d,]*\s+(Series|Trilogy|Saga)\b/i.test(v)) return true;
+    // 3) "The <数字> …" 开头的短名称（不要把 "1,244 Found" 这类统计文案算进来，
+    //    所以要求开头是 The、或者后面紧跟非统计词）
+    if (/^The\s+\d/i.test(v)) return true;
+    return false;
+  }
+
   /** "替换后仍中英夹杂"的文本，是否更像句子（而非界面短语） */
   function looksSentenceLike(source, result, el) {
     if (!el && textNodeEl) el = textNodeEl;
@@ -1700,8 +1751,11 @@
     // 变成 "捐赠或参与志愿或 Volunteer"）。
     const hit = lookupWithKey(trimmed);
     let next = hit ? hit.value : null;
-    let rest = hit ? trimmed.slice(hit.key.length) : '';
-    if (!next) {
+    let rest = hit ? hit.key ? trimmed.slice(hit.key.length) : '' : '';
+    // 用户数据总闸：同人圈/作品/标签这类名称不做 PATTERNS 替换。
+    // 否则 "The 100 Series" 会被 /\d+ Series/ 之类的规则改成 "The 100 个系列"。
+    const isUserData = looksLikeUserData(trimmed);
+    if (!next && !isUserData) {
       const patterned = applyPatterns(trimmed);
       if (patterned !== trimmed) {
         next = patterned;
@@ -1873,7 +1927,10 @@
     phrases: PHRASES,
     translate: function (text) {
       const exact = lookup(text);
-      return exact || applyPatterns(text);
+      if (exact) return exact;
+      // 用户数据（同人圈/作品/系列名）不做 PATTERNS 替换
+      if (looksLikeUserData(text)) return text;
+      return applyPatterns(text);
     },
     /** 测试用：长句里的固定短语替换 */
     translateInline: translateInlinePhrases,

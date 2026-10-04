@@ -1,22 +1,34 @@
-fix(i18n): 媒体页页头面包屑的分类名没翻（1.2.3.28）
+fix(i18n): 用户数据总闸 + 搜索结果页文案（1.2.3.29）
 
-用户报 同人圈→名人与真人（及同类媒体页）页头标题未完整翻译。
+用户报同人圈列表再出现乱替换：The 100 Series -> The 100 个系列。
 
-真实结构：
-    <h2 class="heading"><a>Fandoms</a> &gt; Theater </h2>
-分类名所在的文本节点其实是 "> Theater"（**含面包屑分隔符**），
-所以整段匹配不上词典里的 "Theater"，一直没翻。
+根因（这次找到了真正的漏网路径）：
+"Series" 不是被片段替换改掉的，而是被 **PATTERNS 正则**改掉的
+    [/\b(\d[\d,]*)\s+Series\b/g, '$1 个系列']
+而上一轮的"界面区域白名单"只作用于 translateCompound / translateInlinePhrases
+两条路径，**PATTERNS 完全没被约束**；且公共出口
+    translate: (text) => lookup(text) || applyPatterns(text)
+也是无条件跑 PATTERNS。
 
-修法：translateTextNode 增加面包屑特例——
-识别 ^[>›»]\s*(.+)$ 形式，只翻分隔符后面的部分，
-分隔符与前后空白原样保留（结果为 "同人圈 > 戏剧"）。
+修法（两道）：
+1. KEEP_USER_CONTENT 增加用户数据容器整块跳过：
+   ul.fandom / ul.fandoms / .fandom.index / .fandoms.index / ul.tag /
+   .tag.index / ul.work.index / .work.blurb / li.blurb /
+   .bookmark.blurb / .series.blurb / .collection.blurb /
+   .summary.module / .tag.set
+2. 新增 looksLikeUserData() 总闸，PATTERNS 与 translate() 出口都先过它：
+   - "名称 - 作者"（系列/作品列表条目形态）
+   - "<数字> Series/Trilogy/Saga"
+   - "The <数字> …" 开头的短名称
+   注意不能写成"任何数字开头"，否则 "1,244 Found" 这类统计文案会被误挡。
 
-新增 test/i18n-media.js（4 项，真实浏览器）：
-- 页头分类名已翻译（同人圈 > 戏剧）
-- 面包屑分隔符保留
-- 引导语已翻译（你可以按 ctrl F / cmd F …）
-- **同人圈条目一字未改**（All About Eve / Lazy Town / Angels —— 反向断言，
-  防止区域白名单失效后又被片段替换改坏）
+同时补搜索结果页：
+- Search Results -> 搜索结果；Edit Your Search -> 编辑搜索条件
+- 模式："You searched for: X sort by: Y descending"
+  -> 你搜索了：X 排序：Y 降序（查询词原样保留）
+- 模式："1,244 Found" -> 找到 1,244 条
 
-测试：全部套件通过 —— 71/25/53/19/17/15/9 + 9(the) + 12(homograph)
+回归：guard 从 53 增到 58，新增 5 条同人圈/系列列表条目断言
+（The 100 Series - Kass Morgan、100 Cupboards Series… 等必须原样）。
+测试：全部套件通过 —— 71/25/58/19/17/15/9 + 9(the) + 12(homograph)
       + comment 22/22 + about 5/5 + media 4/4
