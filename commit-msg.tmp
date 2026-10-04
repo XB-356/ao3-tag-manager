@@ -1,25 +1,25 @@
-fix(i18n): translateCompound 也加结果校验 + 补发布页/书签页/媒体页（1.2.3.24）
+fix(i18n): 用"界面区域白名单"彻底挡住用户数据被片段替换（1.2.3.25）
 
-用户报三处，排查时发现上一轮的"结果校验"漏了一条路径。
+用户报同人圈→戏剧页出现严重乱替换：
+    All About Eve -> 全部 About Eve
+    Lazy Town    -> 筛选 Laz Town
+    Angels       -> 关于 Angels
+这些是**作品/同人圈名称**（用户数据），被片段替换改坏。
 
-1. 发布作品页 "发布 to Collections / Challenges"
-   根因：lookup 整段没命中后走的是 **translateCompound（分段替换）**，
-   而上一轮只给 translateInlinePhrases 加了结果校验，compound 仍会把
-   "Post" 单独换成"发布"，拼出半英半中。
-   → translateCompound 增加同样的 looksSentenceLike 校验，
-     中英夹杂且原文较长/成词多时直接放弃
+根因：前面加的"结果校验"只看结果是否中英夹杂，
+但只替换一个词时结果可能不含英文残留（如 "全部 About Eve" 里有英文，
+"关于 Angels" 也有，但更短的场景挡不住），且未限制替换发生的区域。
 
-2. 书签页
-   - Recent Bookmarks -> 最近的书签；Latest Bookmarks -> 最新书签
-   - 引导句整句：These are some of the latest bookmarks created on the
-     Archive. To find more bookmarks, -> 这些是 AO3 上最近创建的一些书签。想找更多书签，
-   - try our advanced search -> 试试高级搜索；choose a fandom -> 选择同人圈
+修法：**片段替换只允许在明确的界面元素里发生**（inUiRegion）：
+- 标签白名单：BUTTON / LABEL / LEGEND / TH / DT / INPUT / SELECT / OPTION
+- 或位于 .navigation / .actions / .filters / .submit / .landmark / #footer /
+  #header / form 内
+同人圈、作品、标签列表所在的元素不在白名单，因此一律不做片段替换。
+（单元测试直接调用 translate() 时没有元素上下文，此时放行，保持既有行为）
 
-3. 媒体页（如 /media/Theater/fandoms）
-   - You can search this page by pressing -> 你可以按
-   - and typing in what you are looking for. -> 然后输入你要找的内容来搜索本页。
+同时补搜索用户页：Name -> 名称、Start typing for suggestions! -> 开始输入以获得建议！
 
-复核：tools/audit-partial.js 仍为 15 处且均为正常翻译
-（如 Rape/Non-Con: -> 强奸/非自愿:）。
+验证：All About Eve / Lazy Town / Angels / Abraham Lincoln's… / The Adams Family
+全部原样保留；Post to Collections / Challenges -> 发布到合集 / 挑战 仍正常。
 
 测试：全部套件通过 —— 71/25/50/19/17/15/9 + 9(the) + 12(homograph) + comment 22/22 + about 5/5

@@ -222,6 +222,10 @@
     'and typing in what you are looking for.': '然后输入你要找的内容来搜索本页。',
     'Post to Collections': '发布到合集',
     'Collections / Challenges': '合集 / 挑战',
+    // —— 搜索用户页 ——
+    'Name': '名称',
+    'Start typing for suggestions!': '开始输入以获得建议！',
+    'Start typing for suggestions': '开始输入以获得建议',
     // —— 修掉"片段替换"残留（整短语收词条，避免半英半中）——
     'AO3 Terms of Service': 'AO3 服务条款',
     'Delete External Work': '删除站外作品',
@@ -1206,6 +1210,8 @@
 
   let observer = null;
   let timer = null;
+  /** 当前处理的文本节点所属元素：片段替换只允许在界面元素里发生 */
+  let textNodeEl = null;
   /** 已经翻译过的文本节点（用 WeakSet，避免 DOM 标记带来的误判） */
   const doneNodes = new WeakSet();
   let running = false;
@@ -1395,7 +1401,7 @@
     // 分段替换后若仍中英夹杂，说明原文是句子/短语而不是可分段界面文案，
     // 宁可放弃（例如 "Post to Collections / Challenges" 曾被拼成
     // "发布 to Collections / Challenges"）。
-    if (looksSentenceLike(String(text), out)) return null;
+    if (looksSentenceLike(String(text), out, textNodeEl)) return null;
     return out;
   }
 
@@ -1552,12 +1558,32 @@
     // 结果校验：片段替换后若仍然中英夹杂，说明原文是"句子"而不是界面短语
     // （例如 "Brief summary of 服务条款 violation (required)"、"配对 help"、
     //   "订阅 and Feeds FAQ"），这类宁可放弃替换，也不要翻出半英半中。
-    if (looksSentenceLike(flat, out)) return null;
+    if (looksSentenceLike(flat, out, textNodeEl)) return null;
     return tidyPunctuation(out);
   }
 
+  /**
+   * 片段替换只允许发生在"明确的界面元素"里。
+   * 同人圈/作品/标签列表这类用户数据不在白名单内，
+   * 否则会把作品名改坏（曾出现 "All About Eve -> 全部 About Eve"、
+   * "Lazy Town -> 筛选 Laz Town"、"Angels -> 关于 Angels"）。
+   */
+  function inUiRegion(el) {
+    // 没有元素上下文（单元测试直接调用 translate()）时放行，
+    // 只在真实页面（translateTextNode 会设置 textNodeEl）里做区域约束。
+    if (!el || !el.tagName) return true;
+    const tag = el.tagName;
+    if (tag === 'BUTTON' || tag === 'LABEL' || tag === 'LEGEND' || tag === 'TH' || tag === 'DT') return true;
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'OPTION') return true;
+    if (el.closest && el.closest('.navigation, .actions, .filters, .submit, .landmark, #footer, #header, form')) return true;
+    return false;
+  }
+
   /** "替换后仍中英夹杂"的文本，是否更像句子（而非界面短语） */
-  function looksSentenceLike(source, result) {
+  function looksSentenceLike(source, result, el) {
+    if (!el && textNodeEl) el = textNodeEl;
+    // 不在界面区域内时，一律不做片段替换
+    if (!inUiRegion(el)) return true;
     if (!/[\u4e00-\u9fa5]/.test(result)) return false;
     // 结果里是否还有成词的英文（品牌/术语白名单除外）
     const rest = result.replace(/\b(AO3|OTW|Kudos|RSS|CSV|HTML|PNG|JPEG|GIF|TWC|Fanlore|Jira|URL|FAQ|TOS|DMCA|TIDA)\b/g, ' ');
@@ -1585,7 +1611,9 @@
     return true;
   }
 
-  function translateTextNode(node, bilingual) {    if (!node.nodeValue || !/\S/.test(node.nodeValue)) return false;
+  function translateTextNode(node, bilingual) {
+    if (!node.nodeValue || !/\S/.test(node.nodeValue)) return false;
+    textNodeEl = node.parentElement;
     const original = node.nodeValue;
     const trimmed = original.trim();
     if (!trimmed) return false;
