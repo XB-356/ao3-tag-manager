@@ -1,31 +1,44 @@
-feat(i18n): 补齐书签筛选侧栏（1.2.3.32）
+feat(i18n): 按官方 locale 对照补齐用户可见章节 + 建立"模拟环境"覆盖测试（1.2.3.33）
 
-用户报个人页→书签的筛选侧栏多处未翻译。用 audit-ui 全页审计后补齐：
-- Ratings -> 分级
-- Other work tags to include / exclude -> 要包含/排除的其他作品标签
-- Other bookmarker's tags to include / exclude -> 要包含/排除的其他收藏者标签
-- More Options -> 更多选项
-- Bookmark types -> 收藏类型（原先只翻了半截，显示"收藏 types"）
-- Search bookmarker's tags and notes -> 搜索收藏者的标签与注释
-- Recs only -> 仅推荐
-- Only bookmarks with notes -> 仅含有注释的书签
-- List of Bookmarks -> 书签列表
-- Top of Bookmark Index -> 回到书签索引顶部
+用户委托：自行按官方仓库模拟环境排查漏翻并修复。
 
-新增 UI_ONLY_KEYS 机制：From / To 这类极短词只在表单标签元素里翻译
-（作品名恰好叫 "From" 时不能被改成"从"）。
+一、按 en.yml 逐章节对照，补齐此前遗漏的**用户真会看到**的章节：
+- 举报滥用表单（abuse_reports.new，31 条）：Your email (required) /
+  Description of the content you are reporting / Send to Abuse Team /
+  Link and Describe Abuse / Fannish Next-of-Kin / DMCA 相关 等
+- 反馈·联系支持表单（feedbacks.new，28 条）：Contact Information /
+  Describe Your Feedback / Send Your Feedback / 各类校验提示 等
+- 认领导入作品（external_authors.claim，27 条）：Claim Work / Claim All Works /
+  Sign me up and give me my work! / Orphan my work… / 通知设置 等
+- 符号说明（help.symbols_key，31 条）：Symbols we use on the Archive /
+  Content rating / Content warnings / F/F·F/M·M/M·Gen·Multi 定义 /
+  Squares 与图标 alt 文本 等（作品卡片上"?"弹窗的内容）
+- 静音用户（muted.users，7 条）与多元声明（home.diversity_statement，7 条）
+- 皮肤编辑（skins.form，6 条）与注册页法律条款（users.registrations，6 条）
 
-审计结论：该页剩余"词典缺"项均为语言名与站点皮肤名
-（af Soomaali / American Sign Language / Default / Reversi / Snow Blue 等），
-按既定原则不翻译。
+对照后确认：剩余未收录条目全部集中在
+admin.*（管理后台）、help.*（帮助文档正文）、home.tos/content/privacy（法律条文）、
+abuse/feedback 的说明性长句、tag_wranglings（标签管理员工具），
+以及语言名与站点皮肤名 —— 按既定原则不翻译。
 
-【重要】过程中我犯了一个严重错误并已修复：
-把 UI_ONLY_KEYS 检查插到了 `const trimmed` 定义**之前**，触发 TDZ
-（Cannot access 'trimmed' before initialization），导致**整个汉化功能崩溃**。
-是全量运行器 test/all.js 立刻暴露了它（theme-i18n / comment / about /
-banner / media 五个浏览器测试同时超时），修复后 15/15 全绿。
+二、新建"模拟环境"覆盖测试（用户要求的自主排查手段）：
+- test/coverage-strings.js：50 条界面文案 + 11 条用户数据样本
+- tools/gen-coverage-mock.js：按 AO3 真实结构（dt/label/legend/button/.notes/
+  ul.fandom/ul.tag/blockquote）生成 test/mock/coverage.html
+- test/i18n-coverage.js：真实浏览器里跑扩展，**双向断言**——
+  50 条界面文案必须翻成期望译文；11 条用户数据必须一字不改
+  （含 All About Eve / Lazy Town / The 100 Series / Jongseong /
+   By Choice, by Fate, or Neither / tip: 语法示例 / 时间戳）
+- 结果：61/61 通过
 
-这也验证了上一轮建立全量运行器的价值：如果还按以前"挑着跑"，
-这个问题会直接被打包发出去。
+三、test/all.js 增加 i18n-coverage，并修掉两个稳定性问题：
+- detect-browser 用 127.0.0.1 替代 localhost（避免解析到 ::1 而 mock 只监听 IPv4）
+- 浏览器测试之间等待 3s，避免 Chrome 未完全退出导致下个测试连不上
 
-测试：node test/all.js -> 15/15 个测试文件通过
+四、排查中的一段插曲（记录以免重犯）：
+覆盖测试初次报"用户数据被吃掉字母 s"（Angels -> Angel），
+一度以为是扩展的严重 bug；dump 真实 DOM 后发现数据完好，
+真因是**测试自身**把 /\s+/ 写进了 JS 模板字符串，
+被转义成 /s+/ 把 s 换成了空格。已修正转义。
+
+测试：node test/all.js -> 16/16 个测试文件通过

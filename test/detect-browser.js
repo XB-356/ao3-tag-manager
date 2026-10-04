@@ -11,7 +11,7 @@ const ART = path.resolve(__dirname, 'artifacts');
 const PORT = Number(process.env.PORT || 8877);
 const CDP_PORT = Number(process.env.CDP_PORT || 9577);
 const MIRROR_HOST = 'ao3.cubeart.club';
-const ENABLED_HOST = 'localhost';
+const ENABLED_HOST = '127.0.0.1'; // 不用 localhost：可能解析到 ::1，而 mock 服务只监听 IPv4
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const { bundleSources } = require('../tools/bundle');

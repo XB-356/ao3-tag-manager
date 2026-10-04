@@ -16,7 +16,7 @@ const UNIT = [
 // 真实浏览器测试（每个都要先清掉遗留的 headless Chrome，避免相互干扰）
 const BROWSER = [
   'run.js', 'theme-i18n.js', 'i18n-comment.js', 'i18n-about.js',
-  'i18n-banner.js', 'i18n-media.js', 'detect-browser.js', 'mirror-userscript.js'
+  'i18n-banner.js', 'i18n-media.js', 'i18n-coverage.js', 'detect-browser.js', 'mirror-userscript.js'
 ];
 
 const killHeadlessChrome = () => {
@@ -27,6 +27,8 @@ const killHeadlessChrome = () => {
     ], { stdio: 'ignore' });
   } catch (e) { /* 忽略 */ }
 };
+
+const sleepSync = (ms) => { try { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); } catch (e) { /* 忽略 */ } };
 
 const run = (file) => {
   const started = Date.now();
@@ -47,6 +49,7 @@ const run = (file) => {
   UNIT.forEach((f) => rows.push(run(f)));
   BROWSER.forEach((f) => {
     killHeadlessChrome();
+    sleepSync(3000); // 等 Chrome 完全退出，否则下一个测试可能连不上调试端口
     rows.push(run(f));
   });
   killHeadlessChrome();
