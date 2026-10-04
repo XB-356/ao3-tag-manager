@@ -248,6 +248,11 @@
     'If you need technical support,': '如果你需要技术支持，',
     'contact our Support team': '联系我们的支持团队',
     'If you experience harassment or have questions about our': '如果你遭遇骚扰，或对我们的',
+    // 注意：这个节点在真实 DOM 里**以 ". " 开头**（前一个链接的结束句号并入了本节点），
+    // 所以必须连句号一起收词，否则 trimmed 变成 ". If you experience…"，对不上。
+    '. If you experience harassment or have questions about our': '。如果你遭遇骚扰，或对我们的',
+    '(including the': '（包括',
+    '),': '），',
     'and': '与',
     'please contact our Policy & Abuse team.': '请联系我们的政策与滥用处理团队。',
     'You don\'t have anything posted under this name yet. Would you like to': '你在这个笔名下还没有发布任何内容。要不要',
@@ -1145,6 +1150,8 @@
     [/\bascending\b/gi, '升序'],
     [/\b(\d[\d,]*)\s+Found\b/g, '找到 $1 条'],
     [/\b(\d[\d,]*)\s+results?\b/gi, '$1 条结果'],
+    // 中文句子末尾的英文句号 -> 中文句号（只在前一个字符是汉字时替换，避免动 URL/缩写）
+    [/([\u4e00-\u9fa5])\s*\.(\s|$)/g, '$1。'],
     // 收件箱标题："My Inbox (2 comments, 1 unread)"（数字是变量）
     [/\bMy Inbox\s*\(\s*(\d[\d,]*)\s*comments?\s*,\s*(\d[\d,]*)\s*unread\s*\)/gi,
       '我的收件箱（$1 条评论，$2 条未读）'],
@@ -1702,6 +1709,23 @@
     // 用 previousElementSibling：AO3 的 <p> 里 "The " 前面往往还有一个
     // 只含换行缩进的文本节点，用 previousSibling 判不到那个 <a>（踩过这个坑）。
     const prevEl = node.previousElementSibling;
+
+    // 孤立句号：AO3 把句末的 "." 切成独立文本节点，紧跟在中文链接之后，
+    // 例如「<a>联系我们的支持团队</a>. 」→ 英文句号在中文后面很难看。
+    // 只在前一个兄弟节点确实以中文结尾时才转换，避免误改英文句子。
+    if (/^\.\s*$/.test(trimmed)) {
+      const prevNode = node.previousSibling;
+      if (prevNode) {
+        const prevText = prevNode.nodeType === 3 ? String(prevNode.nodeValue || '') : '';
+        const prevTail = prevText ||
+          (prevNode.textContent ? String(prevNode.textContent) : '');
+        if (/[\u4e00-\u9fa5]\s*$/.test(prevTail)) {
+          doneNodes.add(node);
+          node.nodeValue = node.nodeValue.replace('.', '。');
+          return true;
+        }
+      }
+    }
 
     // 面包屑标题：AO3 把 "同人圈 > 戏剧" 写成「链接 + "> 分类名"」，
     // 于是分类名所在的文本节点实际是 "> Theater"（含分隔符），

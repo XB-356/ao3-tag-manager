@@ -1,38 +1,32 @@
-fix(i18n): 个人主页欢迎横幅等被 <a> 切碎的句子补节点级词条（1.2.3.30）
+fix(i18n): 个人主页横幅残留英文 + 建立全量测试运行器（1.2.3.31）
 
-用户报个人主页半英半中"问题又回来了"：
-    Hi! It looks like you've just logged in to AO3 ... check out some
-        给新用户的实用提示 也可以翻翻 常见问题.
-    如果你需要技术支持， 联系我们的支持团队. If you experience harassment ...
-    You don't have anything posted under this name yet. ... or maybe 新书签?
+用户报横幅第二句仍有英文残留：
+    If you experience harassment or have questions about our 服务条款 …
 
-根因（两个叠加）：
-1. AO3 把整句用 <a> 切成多个文本节点，长的那几段没有整段词条
-2. 上一轮加的"片段替换守卫"（长句/非界面区不做片段替换）把这些长节点
-   挡掉了 —— 守卫是对的，但**缺少节点级整段词条**，于是保持英文
+真因：该文本节点在真实 DOM 里**以 ". " 开头**
+（前一个链接 <a>联系我们的支持团队</a> 后面的句号并入了本节点），
+所以 trimmed 是 ". If you experience harassment or have questions about our"，
+和词条 "If you experience harassment…" 对不上。
 
-关键点：整段命中（lookup）走的是精确匹配，不受守卫影响，
-所以正确做法是**按真实节点边界逐段收词**。
+补齐：
+- ". If you experience harassment or have questions about our"
+  -> "。如果你遭遇骚扰，或对我们的"（连句号一起收词）
+- "(including the" -> "（包括"；")," -> "），"
+- translateTextNode 增加"孤立句号"处理：文本恰好是 "." 且前一个兄弟节点
+  以中文结尾时，转成中文句号（避免「处理团队.」这种英文句号）
+- 模式：中文字符后的英文句号 -> 中文句号（不影响 URL/英文句子）
 
-补齐（12 条节点级词条）：
-- Hi! It looks like you've just logged in to AO3 … check out some
-  -> 你好！看起来这是你第一次登录 AO3。想上手 AO3，可以看看
-- or browse through -> 也可以翻翻
-- If you need technical support, -> 如果你需要技术支持，
-- contact our Support team -> 联系我们的支持团队
-- If you experience harassment or have questions about our -> 如果你遭遇骚扰，或对我们的
-- and -> 与
-- please contact our Policy & Abuse team. -> 请联系我们的政策与滥用处理团队。
-- You don't have anything posted under this name yet. Would you like to
-  -> 你在这个笔名下还没有发布任何内容。要不要
-- post a new work -> 发布新作品
-- or maybe -> 或者
-- a new bookmark -> 新书签
+【流程修复 —— 这才是根本问题】
+排查时发现 test/i18n-banner.js **早就存在**，而且正好覆盖这次的横幅回归，
+但我此前几轮跑测试时**从没跑过它**（只跑 run/theme-i18n/comment/about）。
+也就是说：这次"问题又回来了"本可以在提交前就被自己的测试拦住。
 
-修复一处**旧词条错误**：'If you experience harassment or have questions
-about our' 旧值是不完整的"如果你遭遇骚扰，或对"（早期 slice 逻辑的残留），
-且因位于文件更后面而覆盖了新值 —— 已删除旧条目。
+因此新增 test/all.js 全量运行器：
+- 自动跑全部 15 个测试文件（含此前漏跑的 i18n-banner / detect-browser /
+  mirror-userscript），浏览器测试之间会自动清理遗留 headless Chrome
+- 输出每个文件通过数与耗时，任一失败即非零退出
 
-回归：guard 从 58 增到 69，新增 11 条个人主页节点断言，避免再次"回来"。
-测试：全部套件通过 —— 71/25/69/19/17/15/9 + 9(the) + 12(homograph)
-      + comment 22/22 + about 5/5 + media 4/4
+结果：15/15 个测试文件通过（71/25/69/22/19/17/15/12/10/9/9/5/5/4/22）
+
+另外：恢复被误覆盖的 test/mock/profile.html（theme-i18n 依赖它），
+并清掉 git 里的 commit-msg.tmp。
