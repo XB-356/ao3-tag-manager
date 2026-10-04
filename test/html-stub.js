@@ -8,7 +8,7 @@ class HtmlEl {
     this.tagName = String(tag).toUpperCase();
     this.attrs = attrs || {};
     this.childNodes = [];
-    this.parentElement = null;
+    this._parentElement = null;
   }
   get className() {
     return this.attrs.class || '';
@@ -72,6 +72,11 @@ class HtmlEl {
     else this.childNodes.splice(i, 0, node);
     return node;
   }
+  appendChild(node) {
+    node.parentElement = this;
+    this.childNodes.push(node);
+    return node;
+  }
   remove() {
     if (this.parentElement) {
       const i = this.parentElement.childNodes.indexOf(this);
@@ -96,6 +101,36 @@ class HtmlEl {
   }
   get children() {
     return this.childNodes.filter((n) => n.nodeType === 1);
+  }
+  /** 前后兄弟节点（真实 DOM 语义，缺了它会让"孤立 The"这类判断失效） */
+  get previousSibling() {
+    if (!this.parentElement) return null;
+    const i = this.parentElement.childNodes.indexOf(this);
+    return i > 0 ? this.parentElement.childNodes[i - 1] : null;
+  }
+  get nextSibling() {
+    if (!this.parentElement) return null;
+    const i = this.parentElement.childNodes.indexOf(this);
+    const list = this.parentElement.childNodes;
+    return i !== -1 && i + 1 < list.length ? list[i + 1] : null;
+  }
+  get previousElementSibling() {
+    if (!this.parentElement) return null;
+    const kids = this.parentElement.children;
+    const i = kids.indexOf(this);
+    return i > 0 ? kids[i - 1] : null;
+  }
+  get nextElementSibling() {
+    if (!this.parentElement) return null;
+    const kids = this.parentElement.children;
+    const i = kids.indexOf(this);
+    return i !== -1 && i + 1 < kids.length ? kids[i + 1] : null;
+  }
+  get parentElement() {
+    return this._parentElement || null;
+  }
+  set parentElement(v) {
+    this._parentElement = v;
   }
   get descendants() {
     const out = [];

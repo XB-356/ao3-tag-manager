@@ -1,18 +1,24 @@
-feat: 增加构建标记，便于确认浏览器实际运行的是哪一版（1.2.3.17）
+fix(i18n): 修掉首段残留的孤立 The（真因：previousSibling 不是那个 <a>）（1.2.3.18）
 
-背景：用户多次反馈"刷新后还是老样子"，排查确认磁盘代码是最新的、
-加载目录也正确，但无法从浏览器侧确认内容脚本是否被 Chrome 缓存。
+用户截图一直是 "The AO3（Archive of Our Own）（AO3）是一个非营利…"。
+
+排查过程：
+- 控制台 build=1.2.3.17 → 代码是最新的，不是缓存问题
+- 用户确认 KISS-Translator 的翻译功能并未开启 → 排除它
+- 打印首段真实 markup 后定位到：
+    <p> The <a>Archive of Our Own</a> (AO3) is a non-profit…</p>
+  其中 "The " 是独立文本节点，**它前面还有一个只含换行缩进的文本节点**，
+  所以 node.previousSibling 是文本节点、不是 <a>，判断永远不成立。
 
 改动：
-- env-core.js 增加 root.AO3TM.BUILD（与 manifest.version 同步）
-- ao3tm:debug 响应里返回 build 字段
+- 判定改用 previousElementSibling（真实 DOM 语义：跳过纯文本节点）
+- 抽出 removeDanglingArticle()：去掉英文冠词、保留原前后空白
+- 增加兜底：The/the 且下一个元素已是中文时也去掉
+- html-stub 补上 previousSibling / nextSibling / previousElementSibling /
+  nextElementSibling / appendChild（之前缺这些，导致结构类判断在单测里无法复现）
 
-用法：在 AO3 页面控制台执行
-  window.dispatchEvent(new CustomEvent('ao3tm:command', { detail: JSON.stringify({ type: 'ao3tm:debug', id: '1' }) }))
-再从 ao3tm:result 事件里看 build 字段。
-
-另：验证了首段的 4 种空格变体（无空格 / 单前导空格 / 前后空格 / 换行缩进）
-在当前代码下都能正确整段翻译；截图里的
-"The AO3（Archive of Our Own）（AO3）是一个非营利…" 属于旧版手工替换留下的混合态。
+验证：i18n-guard 50 项、i18n-the 9 项（含 "The Big Bang, Baby Challenge…
+"The OTW is Recruiting…" "The Hobbit" 等标题不得被动）全部通过。
+注：theme-i18n 曾报失败，单跑 19/19 —— 是并发跑多个浏览器实例导致的偶发。
 
 测试：全部套件通过 —— 71/25/50/19/17/15/9 + 9(the) + comment 22/22

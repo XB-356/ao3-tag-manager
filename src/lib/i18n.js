@@ -175,14 +175,10 @@
     'by working on the unclaimed tasks in our': '，从我们的',
     'AO3\'s history on Fanlore': 'Fanlore 上的 AO3 历史',
     'maximum inclusiveness of fanwork content': '尽可能广泛地收录同人作品',
-    'will not be removed from AO3, even if someone believes they are offensive or objectionable.': '的同人作品不会被移出 AO3，即使有人认为它们冒犯或令人反感。',
     'AO3 runs on': 'AO3 运行在',
     'open-source archiving software': '开源存档软件',
-    'developed by the Organization for Transformative Works (OTW). Anyone is welcome to': '之上，由 OTW（再创作组织）开发。欢迎任何人',
     'contribute': '参与贡献',
-    'by working on the unclaimed tasks in our': '，从我们的',
     'Jira project': 'Jira 项目',
-    'AO3\'s history on Fanlore': 'Fanlore 上的 AO3 历史',
     'Our Team': '我们的团队',
     'Known Issues': '已知问题',
     'Behind the scenes, AO3 is run by volunteers serving on': 'AO3 由志愿者在幕后运营，他们任职于',
@@ -1346,8 +1342,23 @@
     return tidyPunctuation(out);
   }
 
-  function translateTextNode(node, bilingual) {
-    if (!node.nodeValue || !/\S/.test(node.nodeValue)) return false;
+  /**
+   * 去掉"游离的英文冠词"：AO3 会把 The 单独切成一个文本节点，
+   * 中文里没有对应词，留着就会出现 "The AO3（Archive of Our Own）（AO3）…"
+   * 这种半英半中（多个翻译扩展叠加时尤其明显）。
+   * 只在这个节点确实位于链接/强调元素旁时调用，不会误伤 "The Hobbit"。
+   */
+  function removeDanglingArticle(node, trimmed) {
+    doneNodes.add(node);
+    // 保留原有的前后空白，中文才会和相邻链接分开
+    const lead = /^\s/.test(node.nodeValue) ? ' ' : '';
+    const trail = /\s$/.test(node.nodeValue) ? ' ' : '';
+    node.nodeValue = lead + trail || ' ';
+    if (node.parentElement) node.parentElement.setAttribute(ATTR, '1');
+    return true;
+  }
+
+  function translateTextNode(node, bilingual) {    if (!node.nodeValue || !/\S/.test(node.nodeValue)) return false;
     const original = node.nodeValue;
     const trimmed = original.trim();
     if (!trimmed) return false;
@@ -1356,12 +1367,22 @@
     //     <p> The <a>Archive of Our Own</a> (AO3) is a non-profit…</p>
     // 中文里没有对应词，直接把这个孤立的 "The" 去掉，免得出现
     // "The AO3（Archive of Our Own）（AO3）是一个非营利…" 这种半英半中。
-    // 严格限定"前一个兄弟是链接、且原文就是 The/the"，避免误伤作品标题。
-    if (/^(The|the)$/.test(trimmed) && node.previousSibling && node.previousSibling.nodeType === 1) {
-      const prevTag = node.previousSibling.tagName;
+    // 严格限定"前方是链接/强调元素、且原文就是 The/the"，避免误伤作品标题。
+    // 用 previousElementSibling：AO3 的 <p> 里 "The " 前面往往还有一个
+    // 只含换行缩进的文本节点，用 previousSibling 判不到那个 <a>（踩过这个坑）。
+    const prevEl = node.previousElementSibling;
+    if (/^(The|the)$/.test(trimmed) && prevEl) {
+      const prevTag = prevEl.tagName;
       if (prevTag === 'A' || prevTag === 'CITE' || prevTag === 'EM' || prevTag === 'STRONG') {
-        doneNodes.add(node);
-        node.nodeValue = ' '; // 保留一个空格，中文才会和链接分开
+        removeDanglingArticle(node, trimmed);
+        return true;
+      }
+    }
+    // 兜底：文本恰好是 The/the，且紧邻的下一个元素已经是中文译文
+    if (/^(The|the)$/.test(trimmed)) {
+      const nextEl = node.nextElementSibling;
+      if (nextEl && /[\u4e00-\u9fa5]/.test(nextEl.textContent || '')) {
+        removeDanglingArticle(node, trimmed);
         return true;
       }
     }
