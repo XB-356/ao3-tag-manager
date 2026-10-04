@@ -255,6 +255,7 @@
         revision: state.revision,
         // 构建标记：便于排查"浏览器里跑的到底是不是最新代码"
         build: root.AO3TM.BUILD || 'unknown',
+        stats: root.AO3TM.__i18nStats || null,
         counts: store.counts(),
         env: root.AO3TM.env
           ? {

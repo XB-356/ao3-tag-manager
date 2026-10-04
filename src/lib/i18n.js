@@ -61,10 +61,15 @@
     'Comments': '评论',
     'Comment': '评论',
     '↑ Top': '↑ 回到顶部',
-    'Top': '回到顶部',
+    // 注意：Top / Last / Or 都是多义词（Top 也是 AO3 的攻受标签；Last 是 Last visited 的片段），
+    // 已在 EXACT_ONLY 名单里声明，只允许整段精确匹配，绝不参与片段替换。
     'My pseuds:': '我的笔名：',
     'I joined on:': '注册于：',
     'My user ID is:': '我的用户 ID：',
+    // 浏览历史页：Last visited 的 Last 是"最近/末次"，不能按单词替换
+    'Last visited:': '最近浏览：',
+    'Last visited': '最近浏览',
+    'Visited': '浏览过',
     'Manage My Pseuds': '管理我的笔名',
     'Delete My Account': '删除我的账号',
     'characters left': '剩余字符',
@@ -816,7 +821,6 @@
     'Next \u203a': '下一页 \u203a',
     '\u2039 Previous': '\u2039 上一页',
     'First': '首页',
-    'Last': '末页',
     'No results found.': '没有找到结果。',
     'Sorry, we couldn\u2019t find any results for that search.': '抱歉，没有找到符合该搜索的内容。',
     // —— 筛选 / 排序 ——
@@ -891,7 +895,6 @@
     'Password': '密码',
     'Remember me': '记住我',
     'Forgot password?': '忘记密码？',
-    'Or': '或',
     'First Name': '名字',
     'Last Name': '姓氏',
     'Select': '请选择',
@@ -1001,7 +1004,10 @@
     '.ao3tm-tools',
     '.ao3tm-workbar',
     '.ao3tm-fab',
-    '.ao3tm-focus'
+    '.ao3tm-focus',
+    '.ao3tm-tag',
+    '.ao3tm-hide',
+    '.ao3tm-chip'
   ].join(', ');
 
   /** 文本节点：用户内容 + 这些标签的文字都跳过 */
@@ -1095,6 +1101,10 @@
   function shouldSkip(node, bilingual) {
     const el = node.nodeType === 1 ? node : node.parentElement;
     if (!el) return true;
+    // 绝不翻译插件自己的控件：卡片上的标签 chip 里带着标签原文
+    // （例如 <span class="ao3tm-tag" data-tag="Top Park Jongseong | Jay">），
+    // 一旦被翻，标签名就被破坏（"Top" 曾变成 "回到顶部"）。
+    if (el.closest && el.closest('[class*="ao3tm-"]')) return true;
     // 评论表单是例外：它外层带 .comment，但里面全是界面文案，要放行
     const inSkip = el.closest(SKIP_SELECTOR) || null;
     const isForm = isCommentForm(el);
@@ -1215,6 +1225,12 @@
     'or': 1,
     'and': 1,
     'publish': 1,
+    'Top': 1,
+    'top': 1,
+    'Last': 1,
+    'last': 1,
+    'Or': 1,
+    'or': 1,
     'Preferences': 1,
     'Default': 1,
     // 内置站点皮肤名属于数据，一律不翻（也不允许被片段替换）
@@ -1371,13 +1387,30 @@
     // 用 previousElementSibling：AO3 的 <p> 里 "The " 前面往往还有一个
     // 只含换行缩进的文本节点，用 previousSibling 判不到那个 <a>（踩过这个坑）。
     const prevEl = node.previousElementSibling;
-    if (/^(The|the)$/.test(trimmed) && prevEl) {
-      const prevTag = prevEl.tagName;
-      if (prevTag === 'A' || prevTag === 'CITE' || prevTag === 'EM' || prevTag === 'STRONG') {
+    if (/^(The|the)$/.test(trimmed)) {
+      // 判断这个孤立冠词后面是否紧跟一个元素（通常是 <a> 链接）。
+      // 不用 previousElementSibling：真实页面里它可能返回 null
+      // （模板/其它脚本插入节点后会出现同层兄弟状态不一致），
+      // 改用"从父元素子节点列表里定位自己"的方式，稳一点。
+      let followedByEl = !!node.nextElementSibling;
+      if (!followedByEl && prevEl) followedByEl = true;
+      if (!followedByEl) {
+        const parent = node.parentElement;
+        if (parent && parent.childNodes) {
+          const list = parent.childNodes;
+          const i = Array.prototype.indexOf.call(list, node);
+          for (let j = i + 1; j < list.length; j++) {
+            if (list[j].nodeType === 1) { followedByEl = true; break; }
+            if (String(list[j].nodeValue || '').trim()) break; // 中间有实义文本就不算
+          }
+        }
+      }
+      if (followedByEl) {
         removeDanglingArticle(node, trimmed);
         return true;
       }
     }
+
     // 兜底：文本恰好是 The/the，且紧邻的下一个元素已经是中文译文
     if (/^(The|the)$/.test(trimmed)) {
       const nextEl = node.nextElementSibling;

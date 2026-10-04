@@ -1,24 +1,25 @@
-fix(i18n): 修掉首段残留的孤立 The（真因：previousSibling 不是那个 <a>）（1.2.3.18）
+fix(i18n): 多义词（Top/Last/Or）不再被片段替换 + 绝不翻译插件自身控件（1.2.3.19）
 
-用户截图一直是 "The AO3（Archive of Our Own）（AO3）是一个非营利…"。
+用户反馈三处：
+1. "Top" 全部被替换成"回到顶部"，导致 AO3 的攻受标签
+   （<span class="ao3tm-tag" data-tag="Top Park Jongseong | Jay">）被破坏
+2. "或" 异常替换仍在（作品标题 "By Choice, by Fate, or Neither"）
+3. "Last" 多义（"Last visited:" 被替换成 "末页 visited:"）
 
-排查过程：
-- 控制台 build=1.2.3.17 → 代码是最新的，不是缓存问题
-- 用户确认 KISS-Translator 的翻译功能并未开启 → 排除它
-- 打印首段真实 markup 后定位到：
-    <p> The <a>Archive of Our Own</a> (AO3) is a non-profit…</p>
-  其中 "The " 是独立文本节点，**它前面还有一个只含换行缩进的文本节点**，
-  所以 node.previousSibling 是文本节点、不是 <a>，判断永远不成立。
+根因与修法：
+- Top / top / Last / last / Or / or 全部列入 EXACT_ONLY：
+  只允许"整段完全相等"时翻译，绝不参与分段与内嵌替换
+- 移除 'Last' -> '末页'、'Or' -> '或' 这两条危险的单词词条
+- 新增 'Last visited:' -> '最近浏览：'（按整段翻译）
+- 【关键】shouldSkip 增加"插件自身控件一律跳过"：
+  el.closest('[class*="ao3tm-"]') 直接跳过，并把 .ao3tm-tag / .ao3tm-hide /
+  .ao3tm-chip 加进 KEEP_USER_CONTENT。
+  这些控件里存着标签原文（data-tag），被翻就会破坏标签
 
-改动：
-- 判定改用 previousElementSibling（真实 DOM 语义：跳过纯文本节点）
-- 抽出 removeDanglingArticle()：去掉英文冠词、保留原前后空白
-- 增加兜底：The/the 且下一个元素已是中文时也去掉
-- html-stub 补上 previousSibling / nextSibling / previousElementSibling /
-  nextElementSibling / appendChild（之前缺这些，导致结构类判断在单测里无法复现）
-
-验证：i18n-guard 50 项、i18n-the 9 项（含 "The Big Bang, Baby Challenge…
-"The OTW is Recruiting…" "The Hobbit" 等标题不得被动）全部通过。
-注：theme-i18n 曾报失败，单跑 19/19 —— 是并发跑多个浏览器实例导致的偶发。
-
-测试：全部套件通过 —— 71/25/50/19/17/15/9 + 9(the) + comment 22/22
+测试：
+- 新增 test/i18n-homograph.js（12 项）：
+  9 条"多义词在用户内容里不得被动"（Top/Bottom 攻受标签、含 or 的标题、
+  Top Gun、Last Night…、Or Else、单独的 Top/Last/Or）
+  + 3 条"界面文案照翻"（↑ Top / Last visited: / Donate or Volunteer）
+- 全部套件：71/25/50/19/17/15/9 + 9(the) + 12(homograph) + comment 22/22 + about 5/5
+  （theme-i18n 并发跑偶发失败，单跑 19/19）

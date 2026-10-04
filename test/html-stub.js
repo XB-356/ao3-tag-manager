@@ -127,7 +127,21 @@ class HtmlEl {
     return i !== -1 && i + 1 < kids.length ? kids[i + 1] : null;
   }
   get parentElement() {
-    return this._parentElement || null;
+    if (this._parentElement) return this._parentElement;
+    // 兜底：从根节点反查（解析器有些路径没设 _parentElement，
+    // 缺了它 previousElementSibling 这类判断会永远返回 null，测试就失去意义）
+    const root = HtmlEl.__root;
+    if (!root || this === root) return null;
+    let found = null;
+    (function walk(n) {
+      if (found) return;
+      (n.childNodes || []).forEach((c) => {
+        if (c === this) { found = n; return; }
+        walk(c);
+      });
+    })(root);
+    if (found) this._parentElement = found;
+    return found;
   }
   set parentElement(v) {
     this._parentElement = v;
@@ -272,6 +286,7 @@ function parseHtml(html) {
     stack[stack.length - 1].appendChild(el);
     if (!VOID_TAGS[name.toLowerCase()] && !/\/>$/.test(token)) stack.push(el);
   });
+  HtmlEl.__root = root;
   return root;
 }
 
