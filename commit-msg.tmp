@@ -1,24 +1,29 @@
-feat(i18n): 移除 FAQ 页汉化，改翻头顶引导语；补"关于我们"页面（1.2.3.11）
+feat(i18n): 关于我们页面内容整页翻译（1.2.3.12）
 
-1. 移除 FAQ 页汉化（用户要求）
-   AO3 官方已提供简体中文版 FAQ（language_id=zh-Hans），插件再翻会与官中打架，
-   且问答正文属于帮助文档。已删除上一版加入的：
-   Archive FAQ / Available Categories / Expand Categories / Collapse Categories /
-   TOS FAQ / Please consult the English list… 等词条。
+按用户要求，把 About AO3 and the OTW 页面的正文尽量全部翻译。
 
-2. 只保留 FAQ"头顶引导语"的翻译（用户要求）
-   Some commonly asked questions… / . You may also like to check out our /
-   . If you need more help, please
+委员会与说明：
+- Communications / Open Doors / Policy & Abuse / Support / Systems /
+  Tag Wrangling / Translation / User Response Translation
+  及各自的说明句（publishes news posts… / imports at-risk archives… /
+  helps users resolve technical problems… / manages the servers… /
+  sorts and organizes tags… / helps committees communicate… /
+  addresses Policy & Abuse and Support's translation needs…）
 
-3. 新增"关于我们"（About AO3 and the OTW）页面
-   该页段落被 <a> 链接切碎，按真实节点边界收录：
-   AO3 is built upon the principle of / maximum inclusiveness of fanwork content /
-   Fanworks that do not violate the / or some other part of the /
-   will not be removed from AO3… / AO3 runs on / open-source archiving software /
-   developed by the OTW… / contribute / by working on the unclaimed tasks in our /
-   Jira project / AO3's history on Fanlore / Our Team /
-   Behind the scenes… / committees / , which collaborate… /
-   Accessibility, Design, & Technology / designs, maintains, and develops AO3's code. /
-   AO3 Documentation / creates and maintains AO3's FAQs… / Communications
+OTW 段落：
+- AO3 entered open beta in November 2009 and exited beta in April 2026…
+- The OTW is a 501(c)(3) non-profit organization… / donations /
+  and run by and for fans / OTW's mission / is to preserve and protect /
+  transformative fanworks / …are legitimate.
+
+其他项目与结尾：
+- Our other major projects include: / Fanlore / Legal Advocacy / Visit Fanlore. /
+  Visit Open Doors. / Transformative Works and Cultures (TWC) / Visit TWC.
+- Learn More / You can find information on using AO3 in the / Archive FAQs /
+  , or visit the / OTW FAQs / to learn more about our organization… /
+  For technical help using AO3… / contact Policy & Abuse / . If you have any other questions, please
+- Known Issues -> 已知问题
+
+注：Fanlore 为专有名词，站点皮肤名（Default / Snow Blue / Reversi）按用户要求不翻。
 
 测试：全部套件通过 —— 71/25/50/19/17/15/9 + comment 22/22
