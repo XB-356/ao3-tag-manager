@@ -71,6 +71,32 @@ longUi.forEach(([text, want]) => {
   check('长句界面文案仍要翻：' + JSON.stringify(text.slice(0, 40)), out === want, out);
 });
 
+/** 通用短词（连接词/普通单词）绝不能作为片段去替换，否则会切碎标题/笔名/皮肤名 */
+const fragmentGuard = [
+  ['By Choice, by Fate, or Neither', 'By Choice, by Fate, or Neither'],
+  ["fire_fireLuc, firefloof-pers (fire_fireLuc)", 'fire_fireLuc, firefloof-pers (fire_fireLuc)'],
+  ['The Screeny Drop It', 'The Screeny Drop It'],
+  ['Chained Melody', 'Chained Melody'],
+  ['Reversi', 'Reversi'],
+  ['Immortal Longings', 'Immortal Longings']
+];
+fragmentGuard.forEach(([text, want]) => {
+  const out = i18n.translate(text);
+  check('片段键不得切碎文本：' + JSON.stringify(text.slice(0, 40)), out === want, out);
+});
+
+/** 而这些是完整界面文案，必须照翻 */
+const fullUi = [
+  ['Donate or Volunteer', '捐赠或参与志愿'],
+  ['Set your preferences now', '现在就去修改偏好'],
+  ['Share Bookmark', '分享书签'],
+  ['Terms of Service', '服务条款']
+];
+fullUi.forEach(([text, want]) => {
+  const out = i18n.translate(text);
+  check('完整界面文案要翻：' + JSON.stringify(text), out === want, out);
+});
+
 console.log('\n===== 结果 =====');
 console.log(results.length - failed + '/' + results.length + ' 通过');
 process.exit(failed ? 1 : 0);

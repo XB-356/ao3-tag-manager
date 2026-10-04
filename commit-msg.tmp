@@ -1,25 +1,27 @@
-feat(i18n): 补齐偏好设置/笔名/资料/分页/页脚等界面文案（1.2.3.2）
+fix(i18n): 通用短词不再参与片段替换，杜绝标题/笔名被切碎（1.2.3.3）
 
-词典 575 -> 644 条，按官方 locale 补：
-- preferences.index：设置我的偏好、编辑我的资料、导航、
-  尽可能不让搜索引擎收录我的作品、隐藏作品上的分享按钮、
-  允许他人邀请我作为共同作者、关闭合集/评论邮件与收件箱消息、语言偏好说明、作品标题格式
-- pseuds.*：新建笔名、笔名删除、书签转移、删除确认
-- profile.*：编辑资料、修改资料、编辑我的作品
-- layouts.*：隐藏横幅、查看许可证、不再提示、重要提示、
-  第三方代理站点风险提示、无 JavaScript 提示
-- pagy.*：分页、上一页/下一页
-- downloads.*：前言、后记、章节批注/摘要/末批注、受这篇启发的作品、统计
-- bookmarks.*：已保存、分享、收藏站外作品、删除书签确认
+现象（用户截图）：
+- 作品标题 "By Choice, by Fate, or Neither" -> "By Choice, by Fate, 或 Neither"
+- 页脚 "Donate or Volunteer" 被切成 "捐赠或参与志愿 或 Volunteer"
+- 提示行 "Set your preferences now" 被切成 "现在就去设置偏好 偏好设置 now"
+- 作品状态 "Work in Progress" -> "作品 / Progress"
 
-新增排查工具（可复用于以后补词）：
-- tools/audit-english.js：列出真实页面里"仍是英文"的可见文本，
-  并区分「词典缺」与「引擎能翻但没被处理」
-- tools/audit-missed.js：从 data-ao3tm-orig 提取原文，判断还差哪些
+根因：词典里收录了 or / and / publish / Preferences / Donate / Work 这类
+通用短词，它们参与"分段 + 内嵌替换"后会把无关文本切碎。
 
-验证：
-- 官方 locale 里用户可见章节（preferences/pseuds/profile/pagy/layouts/
-  downloads/bookmarks 等）已清零，剩余 1221 条集中在
-  法律条文(home.tos/content/privacy)、管理后台(admin.*)、帮助文档(help.*)，有意不翻
-- 真实页面复核：个人页无残余；偏好页剩余英文主要是用户自建皮肤名与时区列表
-- 全部套件通过：71/25/23/19/17/15/9
+改动：
+- 新增 EXACT_ONLY 名单：or、and、publish、Preferences、Default、Share、
+  From、To、Site、Rules、Contents、Block/Unblock、Mute/Unmute、
+  Either、Closed、Moderated、Canonical、Synonymous、Unwrangleable、Note
+  等只允许"整段精确匹配"，绝不参与片段替换
+- INLINE_EXCLUDE 扩充：Donate、Volunteer、Donate or Volunteer、
+  Set your preferences now、Preferences、Work in Progress / Complete Work
+- 补充 Work in Progress -> 连载中、Completed Work -> 已完结
+- 补上成人内容页的 cookie 提示整句翻译
+- Set your preferences now 译文改为"现在就去修改偏好"（原为拼接结果）
+
+测试：
+- test/i18n-guard.js 增至 33 项，新增"片段键不得切碎文本"与
+  "完整界面文案要翻"两组双向用例
+- 作品页离线复核：可疑替换 0 处
+- 全部套件通过：71/25/33/19/17/15/9

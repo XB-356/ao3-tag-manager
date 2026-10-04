@@ -293,7 +293,11 @@
     'This work could have adult content. If you continue, you have agreed that you are willing to see such content.': '这篇作品可能包含成人内容。继续访问即表示你同意查看此类内容。',
     'No, Go Back': '不，返回',
     'Yes, Continue': '是的，继续',
-    'Set your preferences now': '现在就去设置偏好',
+    'Set your preferences now': '现在就去修改偏好',
+    'Work in Progress': '连载中',
+    'Completed Work': '已完结',
+    'Complete Work': '已完结',
+    'If you accept cookies from our site and you choose "Yes, Continue", you will not be asked again during this session (that is, until you close your browser). If you log in you can store your preference and never be asked again.': '如果你接受本站的 Cookie 并选择「是的，继续」，本次会话期间将不再询问（即直到你关闭浏览器）。登录后可以保存此偏好，之后就不再询问。',
     'Adult Content Warning': '成人内容警告',
     'Add co-creators': '添加共同作者',
     'Add co-creators?': '要添加共同作者吗？',
@@ -934,6 +938,38 @@
   let INLINE_PHRASES = null;
 
   /**
+   * 这些词条**只能整段精确匹配**，绝不参与分段/内嵌替换。
+   * 它们要么是连接词/虚词（or、and），要么本身是普通英文单词（Default、Share…），
+   * 一旦被当作片段去替换，就会把作品标题、笔名、皮肤名切得七零八落
+   * （例如 "By Choice, by Fate, or Neither" 变成 "By Choice, by Fate, 或 Neither"）。
+   */
+  const EXACT_ONLY = {
+    'or': 1,
+    'and': 1,
+    'publish': 1,
+    'Preferences': 1,
+    'Default': 1,
+    'Share': 1,
+    'From': 1,
+    'To': 1,
+    'Site': 1,
+    'Rules': 1,
+    'Prompts:': 1,
+    'Contents': 1,
+    'Block': 1,
+    'Unblock': 1,
+    'Mute': 1,
+    'Unmute': 1,
+    'Either': 1,
+    'Closed': 1,
+    'Moderated': 1,
+    'Canonical': 1,
+    'Synonymous': 1,
+    'Unwrangleable': 1,
+    'Note': 1
+  };
+
+  /**
    * 内嵌替换要排除的短语：这些是 AO3 的"标签类别名 / 分级名"，
    * 会正常出现在作品标题、标签名、新闻标题里（例如
    * 《Updates to "No Fandom" Additional Tags》）——那时不该翻。
@@ -949,7 +985,16 @@
     'Choose Not To Use Archive Warnings': 1,
     'General Audiences': 1,
     'Teen And Up Audiences': 1,
-    'Not Rated': 1
+    'Not Rated': 1,
+    'Donate': 1,
+    'Volunteer': 1,
+    'Donate or Volunteer': 1,
+    'Set your preferences now': 1,
+    'Preferences': 1,
+    'Work in Progress': 1,
+    'Work In Progress': 1,
+    'Complete Work': 1,
+    'Completed Work': 1
   };
 
   function inlinePhrases() {
@@ -957,6 +1002,7 @@
     INLINE_PHRASES = Object.keys(PHRASES)
       .filter(function (key) {
         if (INLINE_EXCLUDE[key]) return false;
+        if (EXACT_ONLY[key]) return false; // 连接词/普通单词只允许整段匹配
         return key.length >= PHRASE_MIN_LEN && /[A-Za-z]/.test(key);
       })
       // 长的先替换，避免短词把长句切碎
