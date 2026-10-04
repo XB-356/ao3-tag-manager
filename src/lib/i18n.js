@@ -1643,6 +1643,24 @@
     // 用 previousElementSibling：AO3 的 <p> 里 "The " 前面往往还有一个
     // 只含换行缩进的文本节点，用 previousSibling 判不到那个 <a>（踩过这个坑）。
     const prevEl = node.previousElementSibling;
+
+    // 面包屑标题：AO3 把 "同人圈 > 戏剧" 写成「链接 + "> 分类名"」，
+    // 于是分类名所在的文本节点实际是 "> Theater"（含分隔符），
+    // 整段匹配不上词典。这里只翻分隔符后面的部分。
+    const crumb = trimmed.match(/^([>›»]\s*)(.+)$/);
+    if (crumb) {
+      const crumbText = lookup(crumb[2].trim());
+      if (crumbText) {
+        const isOrig = node.nodeValue;
+        const lead = isOrig.match(/^\s*/)[0];
+        const trail = isOrig.match(/\s*$/)[0];
+        doneNodes.add(node);
+        node.nodeValue = lead + crumb[1] + crumbText + trail;
+        if (node.parentElement) node.parentElement.setAttribute(ATTR, '1');
+        return true;
+      }
+    }
+
     if (/^(The|the)$/.test(trimmed)) {
       // 判断这个孤立冠词后面是否紧跟一个元素（通常是 <a> 链接）。
       // 不用 previousElementSibling：真实页面里它可能返回 null

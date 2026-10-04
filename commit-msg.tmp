@@ -1,17 +1,22 @@
-feat(i18n): 翻译搜索框的语法提示标签 tip:（1.2.3.27）
+fix(i18n): 媒体页页头面包屑的分类名没翻（1.2.3.28）
 
-用户报搜索框下方 "tip: arthur merlin words>1000 sort:hits" 没翻。
+用户报 同人圈→名人与真人（及同类媒体页）页头标题未完整翻译。
 
-官方 locale 里这其实是一个独立的界面标签：
-    works.search_box.tooltip_label: 'tip:'
-后面的 "arthur merlin words>1000 sort:hits" 是**示例查询语法**，
-是给用户照抄的，必须保持原样（翻成中文反而没法用）。
+真实结构：
+    <h2 class="heading"><a>Fandoms</a> &gt; Theater </h2>
+分类名所在的文本节点其实是 "> Theater"（**含面包屑分隔符**），
+所以整段匹配不上词典里的 "Theater"，一直没翻。
 
-改法：
-- 新增整段词条 'tip:' -> '提示：'
-- 新增模式 /^\s*tip:\s*/i -> '提示：'，让"标签 + 示例"整行也能翻前半段
-  结果是「提示：arthur merlin words>1000 sort:hits」——标签中文、语法可照抄
+修法：translateTextNode 增加面包屑特例——
+识别 ^[>›»]\s*(.+)$ 形式，只翻分隔符后面的部分，
+分隔符与前后空白原样保留（结果为 "同人圈 > 戏剧"）。
 
-测试调整：原先 guard 里把整行 tip 当作"不得改动"，
-现改为"只翻标签、查询保留"的专门断言（2 条）。
-全部套件通过 —— 71/25/53/19/17/15/9 + 9(the) + 12(homograph) + comment 22/22 + about 5/5
+新增 test/i18n-media.js（4 项，真实浏览器）：
+- 页头分类名已翻译（同人圈 > 戏剧）
+- 面包屑分隔符保留
+- 引导语已翻译（你可以按 ctrl F / cmd F …）
+- **同人圈条目一字未改**（All About Eve / Lazy Town / Angels —— 反向断言，
+  防止区域白名单失效后又被片段替换改坏）
+
+测试：全部套件通过 —— 71/25/53/19/17/15/9 + 9(the) + 12(homograph)
+      + comment 22/22 + about 5/5 + media 4/4
