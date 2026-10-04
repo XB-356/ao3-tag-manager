@@ -908,6 +908,60 @@ async function main() {
       cardMenu.onlyRows === cardMenu.blockRows,
     cardMenu
   );
+  // 同人原作（fandom）要单独成组，且能单独屏蔽
+  const fandomMenu = await evaluate(`(() => {
+    const menu = document.querySelector('.ao3tm-menu');
+    if (!menu) return null;
+    const labels = Array.prototype.map.call(menu.querySelectorAll('.ao3tm-menu-label'), n => n.textContent.trim());
+    return {
+      labels: labels,
+      fandomActs: Array.prototype.map.call(menu.querySelectorAll('button[data-act^="fandom-"]'), n => n.getAttribute('data-act') + ':' + n.getAttribute('data-index')),
+      fandomNames: Array.prototype.map.call(
+        menu.querySelectorAll('.ao3tm-menu-label'),
+        n => n.textContent.trim()
+      ).indexOf('同人原作（fandom）')
+    };
+  })()`);
+  record(
+    '卡片菜单：同人原作（fandom）单独成组并有屏蔽/只看',
+    fandomMenu &&
+      fandomMenu.labels.indexOf('同人原作（fandom）') !== -1 &&
+      fandomMenu.fandomActs.indexOf('fandom-block:0') !== -1 &&
+      fandomMenu.fandomActs.indexOf('fandom-only:0') !== -1,
+    fandomMenu
+  );
+
+  // 单独屏蔽 fandom：mock 里 5 篇的 fandom 都是 Mock Fandom，应当全部隐藏
+  await evaluate(`(() => {
+    const btn = document.querySelector('.ao3tm-menu button[data-act="fandom-block"]');
+    if (btn) btn.click();
+    return true;
+  })()`);
+  await waitFor(`document.querySelectorAll('li.blurb.ao3tm-hidden').length === 5`, '屏蔽 fandom 后隐藏 5 篇');
+  const afterFandom = await evaluate(`({
+    hidden: Array.from(document.querySelectorAll('li.blurb.ao3tm-hidden')).map(n => n.id).sort(),
+    why101: document.getElementById('work_101').getAttribute('data-ao3tm-why')
+  })`);
+  const fandomRules = await command('ao3tm:debug');
+  record(
+    '单独屏蔽同人原作：命中该原作的 5 篇全被隐藏，且原因标为该 fandom',
+    afterFandom.hidden.join(',') === 'work_101,work_102,work_103,work_104,work_105' &&
+      /Mock Fandom/.test(String(afterFandom.why101)) &&
+      fandomRules.rules.tag.some((r) => /^block:Mock Fandom$/i.test(r)),
+    { hidden: afterFandom.hidden, why101: afterFandom.why101, tagRules: fandomRules.rules.tag }
+  );
+  // 收尾：撤销这条 fandom 规则，别影响后面的用例
+  await evaluate(`(() => {
+    const btn = Array.prototype.filter.call(
+      document.querySelectorAll('.ao3tm-panel-root [data-act="remove"][data-kind="tag"]'),
+      n => /Mock Fandom/i.test(n.getAttribute('data-pattern'))
+    )[0];
+    return true;
+  })()`);
+  await command('ao3tm:debug', { clear: true });
+  await sleep(800);
+  await evaluate(`window.dispatchEvent(new CustomEvent('ao3tm:command', { detail: JSON.stringify({ type: 'ao3tm:refresh', id: 'x3' }) }))`);
+  await sleep(700);
   const beforeCardWork = (await command('ao3tm:state')).counts.blockedWorks;
   await clickMenuAction('work');
   await sleep(900);

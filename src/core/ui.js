@@ -255,7 +255,7 @@
    * @param {Element} el 作品卡片
    * @param {Element|null} anchor 定位参照（按钮）；为空时用 point
    * @param {{x:number,y:number}|null} point 视口坐标（右键位置）
-   * @param {{tag?:string, author?:string}} [focus] 只显示某个标签 / 作者的快捷操作（右键时用）
+   * @param {{tag?:string, author?:string, fandom?:string}} [focus] 只显示某个标签 / 作者 / 原作的快捷操作（右键时用）
    */
   function openBlurbMenu(el, anchor, point, focus) {
     closeMenus();
@@ -263,9 +263,11 @@
     const title = D.titleOf(el);
     const authors = D.authorsOf(el);
     const tags = D.blurbTags(el).slice(0, 12);
+    const fandoms = D.blurbFandoms ? D.blurbFandoms(el) : [];
     const blocked = path && store.isWorkBlocked(path);
-    const onlyTag = focus && focus.tag;
-    const onlyAuthor = focus && !onlyTag && focus.author;
+    const onlyFandom = focus && focus.fandom;
+    const onlyTag = focus && !onlyFandom && focus.tag;
+    const onlyAuthor = focus && !onlyFandom && !onlyTag && focus.author;
 
     const row = function (kind, text, isBlock, isOnly, index) {
       return (
@@ -303,17 +305,39 @@
       })
       .join('');
 
-    const headText = onlyTag ? onlyTag : onlyAuthor ? onlyAuthor + store.AUTHOR_LABEL_SUFFIX : title || path || '这篇作品';
-    const headSub = onlyTag || onlyAuthor ? title || path || '' : authors.length ? authors.join('、') : '';
+    // 同人原作（fandoms）单独归类：AO3 里它就是 a.tag，
+    // 但用户是按"原作"想的，混在几十个标签里很难找，所以单列一行
+    const fandomRows = fandoms
+      .map(function (fandom, index) {
+        return row('fandom', fandom, store.hasRule('tag', fandom, 'block'), store.hasRule('tag', fandom, 'allow'), index);
+      })
+      .join('');
+
+    const headText = onlyTag
+      ? onlyTag
+      : onlyAuthor
+        ? onlyAuthor + store.AUTHOR_LABEL_SUFFIX
+        : onlyFandom
+          ? onlyFandom + '（同人原作）'
+          : title || path || '这篇作品';
+    const headSub = onlyTag || onlyAuthor || onlyFandom ? title || path || '' : authors.length ? authors.join('、') : '';
 
     let body = '';
-    if (onlyTag) {
+    if (onlyFandom) {
+      body = '<div class="ao3tm-menu-label">右键的这个同人原作</div>' + fandomRows;
+    } else if (onlyTag) {
       // 右键标签：把该标签的操作放在最上面
       body = '<div class="ao3tm-menu-label">右键的这个标签</div>' + tagRows;
     } else if (onlyAuthor) {
-      body = '<div class="ao3tm-menu-label">右键的这个作者</div>' + authorRows;
+      // authorRows 为空说明这一篇没解析出作者（页面结构异常 / 匿名 / 作者名不在预期容器里）
+      body = authorRows
+        ? '<div class="ao3tm-menu-label">右键的这个作者</div>' + authorRows
+        : '<div class="ao3tm-menu-label">右键的这个作者</div>' +
+          '<div class="ao3tm-menu-note">没有识别到这一篇的作者，暂时无法在此屏蔽。可以试试右键作者名本身，或用「规则设置」手动添加作者。</div>' +
+          authorRows;
     } else {
       body = authors.length ? '<div class="ao3tm-menu-label">作者（点一下即屏蔽 / 只看）</div>' + authorRows : '';
+      body += fandomRows ? '<div class="ao3tm-menu-label">同人原作（fandom）</div>' + fandomRows : '';
       body += tags.length ? '<div class="ao3tm-menu-label">标签（点一下即屏蔽 / 只看）</div>' + tagRows : '';
     }
 
@@ -384,6 +408,11 @@
       } else if (act === 'panel') {
         closeMenus();
         openPanel();
+      } else if (act === 'fandom-block' || act === 'fandom-only') {
+        // fandom 在存储里就是标签规则（AO3 的 fandom 也是 a.tag）
+        const result = store.toggleRule('tag', fandoms[index], act === 'fandom-only' ? 'allow' : 'block');
+        toast(ruleMessage(result, fandoms[index]));
+        refresh();
       } else if (act.indexOf('tag-') === 0 && tags[index]) {
         const result = store.toggleRule('tag', tags[index], act === 'tag-only' ? 'allow' : 'block');
         toast(ruleMessage(result, tags[index]));
@@ -747,17 +776,16 @@
   function authorOf(node) {
     if (!node || !node.closest) return '';
     const link = node.closest('a[href*="/users/"]');
-    if (link) {
-      const match = (link.getAttribute('href') || '').match(/\/users\/([^/?#]+)/);
-      if (match) {
-        try {
-          return decodeURIComponent(match[1]).trim();
-        } catch (err) {
-          return match[1];
-        }
-      }
-    }
-    return '';
+    if (!link) return '';
+    // 与 dom.js 保持同一套规则：优先伪名（页面上显示的就是它）
+    return D.authorNameFromHref ? D.authorNameFromHref(link.getAttribute('href'), link.textContent) : '';
+  }
+
+  function fandomOf(node) {
+    if (!node || !node.closest) return '';
+    const link = node.closest('.fandoms a.tag');
+    if (!link) return '';
+    return tagOf(link);
   }
 
   function recordContextHit(event) {
@@ -795,9 +823,16 @@
   function openContextMenuAt(event, target) {
     const tag = tagOf(target);
     const author = authorOf(target);
+    const fandom = fandomOf(target);
     const blurb = target.closest('.blurb, li.work, li.bookmark');
     const point = { x: event.clientX, y: event.clientY };
 
+    if (fandom && blurb) {
+      event.preventDefault();
+      event.stopPropagation();
+      openBlurbMenu(blurb, null, point, { fandom: fandom });
+      return true;
+    }
     if (tag && blurb) {
       event.preventDefault();
       event.stopPropagation();
@@ -816,11 +851,11 @@
       openBlurbMenu(blurb, null, point, null);
       return true;
     }
-    // 作品页：没有卡片容器，右键任意位置都能操作"这篇作品 / 作者 / 标签"
+    // 作品页：没有卡片容器，右键任意位置都能操作"这篇作品 / 作者 / 标签 / 原作"
     if (D.isWorkPage()) {
       event.preventDefault();
       event.stopPropagation();
-      openWorkPageContextMenu(tag, author, point);
+      openWorkPageContextMenu(fandom ? '' : tag, author, point, fandom);
       return true;
     }
     return false;
@@ -872,17 +907,28 @@
   }
 
   /** 作品页上的右键菜单（没有卡片容器，直接给作品 / 标签 / 作者操作） */
-  function openWorkPageContextMenu(tag, author, point) {
+  function openWorkPageContextMenu(tag, author, point, fandom) {
     closeMenus();
     const title = D.workPageTitle();
     const path = D.hrefToPath(location.pathname);
     const blocked = path && store.isWorkBlocked(path);
     const hidden = path && store.isWorkHidden(path);
 
-    // 右击的具体对象（标签 / 作者）放在最上面，作品级操作始终保留
+    // 右击的具体对象（标签 / 作者 / 原作）放在最上面，作品级操作始终保留
     let head = title || path || '这篇作品';
     let body = '';
-    if (tag || author) {
+    if (fandom) {
+      head = fandom + '（同人原作）';
+      body =
+        '<div class="ao3tm-menu-label">右键的这个同人原作</div>' +
+        '<div class="ao3tm-menu-row"><span class="ao3tm-menu-name">' +
+        esc(fandom) +
+        '</span><button type="button" class="ao3tm-chip' +
+        (store.hasRule('tag', fandom, 'block') ? ' is-on' : '') +
+        '" data-act="one-block">屏蔽</button><button type="button" class="ao3tm-chip' +
+        (store.hasRule('tag', fandom, 'allow') ? ' is-on' : '') +
+        '" data-act="one-only">只看</button></div>';
+    } else if (tag || author) {
       const kind = tag ? 'tag' : 'author';
       const value = tag || author;
       const label = tag || author + store.AUTHOR_LABEL_SUFFIX;

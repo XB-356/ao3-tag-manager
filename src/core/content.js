@@ -166,12 +166,62 @@
       return true;
     }
 
+    // 排查用：把"右键这一下到底识别成了什么"以及菜单实际渲染出的动作列出来
+    if (message.probeContext) {
+      const D = root.AO3TM.dom;
+      const hit = root.AO3TM.ui.lastContextHit ? root.AO3TM.ui.lastContextHit() : null;
+      const menu = document.querySelector('.ao3tm-menu');
+      const blurbs = D.blurbs();
+      sendResponse({
+        hit: hit,
+        menu: menu
+          ? {
+              head: (menu.querySelector('.ao3tm-menu-head') || {}).textContent || '',
+              labels: Array.prototype.map.call(menu.querySelectorAll('.ao3tm-menu-label'), function (n) {
+                return n.textContent.trim();
+              }),
+              actions: Array.prototype.map.call(menu.querySelectorAll('button[data-act]'), function (b) {
+                return b.getAttribute('data-act');
+              }),
+              rows: Array.prototype.map.call(menu.querySelectorAll('.ao3tm-menu-row .ao3tm-menu-name'), function (n) {
+                return n.textContent.trim();
+              })
+            }
+          : null,
+        sample: blurbs.slice(0, 3).map(function (el) {
+          const authorLinks = el.querySelectorAll('a[href*="/users/"]');
+          return {
+            id: el.getAttribute('id') || '',
+            authors: D.authorsOf(el),
+            fandoms: D.blurbFandoms ? D.blurbFandoms(el) : null,
+            tagCount: D.blurbTags(el).length,
+            authorLinkCount: authorLinks.length,
+            authorLinkHrefs: Array.prototype.map.call(authorLinks, function (a) {
+              return a.getAttribute('href');
+            }),
+            authorLinkTexts: Array.prototype.map.call(authorLinks, function (a) {
+              return (a.textContent || '').trim();
+            }),
+            liAuthorCount: el.querySelectorAll('li.author').length,
+            bylineCount: el.querySelectorAll('.byline').length,
+            statsHtml: (function () {
+              const box = el.querySelector('ul.stats, dl.stats, .stats');
+              return box ? box.outerHTML.slice(0, 400) : null;
+            })()
+          };
+        })
+      });
+      return true;
+    }
+
     if (message.type === 'ao3tm:debug') {
       // 给自动化测试/排查用：先按当前设置应用一次主题与汉化，再返回状态
       const D = root.AO3TM.dom;
       const M = root.AO3TM.match;
       const store = root.AO3TM.store;
       if (message.clear) store.clearAll('all');
+      // 测试用：直接改设置（避免依赖面板点击时序）
+      if (message.setSetting) store.updateSettings(message.setSetting);
       if (message.revealReset && root.AO3TM.filter) root.AO3TM.filter.resetReveal();
       if (message.apply) {
         if (root.AO3TM.ui) root.AO3TM.ui.applyTheme();

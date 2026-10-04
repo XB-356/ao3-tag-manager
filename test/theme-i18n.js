@@ -284,6 +284,82 @@ async function main() {
   const restored = await evaluate(`document.querySelector('h2').textContent.trim()`);
   record('关闭汉化后刷新页面恢复英文', restored === 'Works', { restored: restored });
 
+  /* ---------------- 个人资料页汉化 ---------------- */
+
+  // 重新打开汉化：在 i18n.html 上跑命令（内容脚本就在这个页面）
+  await open('http://127.0.0.1:' + PORT + '/i18n.html');
+  await waitFor(`!!document.documentElement.getAttribute('data-ao3tm-ready')`, 'i18n 页就绪');
+  await command('ao3tm:debug', { setSetting: { i18n: true } });
+  await sleep(800);
+  const i18nOnProfile = await command('ao3tm:debug');
+  record('个人资料页测试前：汉化开关已打开', i18nOnProfile.settings && i18nOnProfile.settings.i18n === true, i18nOnProfile.settings && i18nOnProfile.settings.i18n);
+
+  await open('http://127.0.0.1:' + PORT + '/profile.html');
+  await waitFor(`!!document.documentElement.getAttribute('data-ao3tm-ready')`, '个人资料页就绪', 25000);
+  await sleep(1500);
+
+  const profileText = await evaluate(`(() => {
+    const grab = (sel) => {
+      const n = document.querySelector(sel);
+      return n ? n.textContent.replace(/\\s+/g, ' ').trim() : null;
+    };
+    const head = document.querySelector('h3.heading');
+    return {
+      url: location.href,
+      ready: document.documentElement.getAttribute('data-ao3tm-ready'),
+      i18nMarked: document.querySelectorAll('[data-ao3tm-i18n]').length,
+      headMarked: head ? head.getAttribute('data-ao3tm-i18n') : null,
+      headText: head ? head.textContent.trim() : null,
+      dt: Array.prototype.map.call(document.querySelectorAll('dl.meta dt'), n => n.textContent.trim()),
+      dd: Array.prototype.map.call(document.querySelectorAll('dl.meta dd'), n => n.textContent.trim()),
+      actions: Array.prototype.map.call(document.querySelectorAll('.navigation.actions a'), n => n.textContent.trim()),
+      headings: Array.prototype.map.call(document.querySelectorAll('h3.heading'), n => n.textContent.trim()),
+      bio: grab('#user-bio'),
+      pseudNote: grab('.pseud .note'),
+      subsText: grab('.subscriptions p'),
+      tableHead: Array.prototype.map.call(document.querySelectorAll('table thead th'), n => n.textContent.trim())
+    };
+  })()`);
+  console.log('   [profile diag] url=' + profileText.url + ' ready=' + profileText.ready + ' marked=' + profileText.i18nMarked + ' head=' + profileText.headMarked + '/' + profileText.headText);
+
+  record(
+    '个人资料页：dl/dt 标签（Joined / Kudos Given 等）已汉化',
+    profileText.dt.indexOf('加入时间：') !== -1 &&
+      profileText.dt.indexOf('送出的 Kudos：') !== -1 &&
+      profileText.dt.indexOf('收到的 Kudos：') !== -1 &&
+      profileText.dt.indexOf('作品：') !== -1,
+    profileText.dt
+  );
+  record(
+    '个人资料页：小标题（Profile / Pseuds / Bio / Preferences）已汉化',
+    profileText.headings.indexOf('个人资料') !== -1 &&
+      profileText.headings.indexOf('笔名') !== -1 &&
+      profileText.headings.indexOf('简介') !== -1,
+    profileText.headings
+  );
+  record(
+    '个人资料页：操作链接（管理笔名 / 偏好 / 浏览历史）已汉化',
+    profileText.actions.indexOf('管理我的笔名') !== -1 &&
+      profileText.actions.some((t) => /偏好/.test(t)) &&
+      profileText.actions.indexOf('浏览历史') !== -1,
+    profileText.actions
+  );
+  record(
+    '个人资料页：句子型文案（You have no subscriptions.）已汉化',
+    profileText.subsText === '你还没有订阅。',
+    profileText.subsText
+  );
+  record(
+    '个人资料页：表格表头（Title / Fandoms / Words / Kudos）已汉化',
+    profileText.tableHead.indexOf('标题') !== -1 && profileText.tableHead.indexOf('同人圈') !== -1,
+    profileText.tableHead
+  );
+  record(
+    '个人资料页：用户自己写的简介一个字都不能改',
+    profileText.bio === 'I write fluffy things and I like tea. Works: 12 is my favourite number.',
+    profileText.bio
+  );
+
   console.log('\n===== 结果 =====');
   const failed = results.filter((r) => !r.ok);
   console.log(results.length - failed.length + '/' + results.length + ' 通过');

@@ -56,31 +56,82 @@
     return clean(node ? node.textContent : '');
   }
 
+  /**
+   * 从作者链接里取作者名。
+   * AO3 的伪名（pseud）链接形如 /users/<登录名>/pseuds/<伪名>，
+   * 页面上显示、用户右键点到的都是伪名；只取登录名会导致"屏蔽作者"永远匹配不上。
+   * 返回 { name, aliases }：name 是显示名（优先伪名），aliases 里带上登录名，
+   * 这样按登录名写的旧规则也还能命中。
+   */
+  function authorFromHref(href, fallbackText) {
+    const raw = String(href || '');
+    const pseud = raw.match(/\/pseuds\/([^/?#]+)/);
+    const user = raw.match(/\/users\/([^/?#]+)/);
+    const pseudName = pseud ? decodeSafely(pseud[1]).trim() : '';
+    const userName = user ? decodeSafely(user[1]).trim() : '';
+    if (pseudName) {
+      return { name: pseudName, aliases: userName && userName !== pseudName ? [userName] : [] };
+    }
+    if (userName) return { name: userName, aliases: [] };
+    const text = clean(decodeSafely(fallbackText));
+    return { name: text, aliases: [] };
+  }
+
+  /** 只要名字（旧调用点用） */
+  function authorNameFromHref(href, fallbackText) {
+    return authorFromHref(href, fallbackText).name;
+  }
+
+  function decodeSafely(value) {
+    try {
+      return decodeURIComponent(String(value == null ? '' : value));
+    } catch (err) {
+      // 文本里本来就有 % 号时会解码失败，退回原文
+      return String(value == null ? '' : value);
+    }
+  }
+
   function authorsOf(el) {
     const out = [];
     const seen = Object.create(null);
-    const list = el.querySelectorAll('li.author, .byline');
-    Array.prototype.forEach.call(list, function (li) {
+
+    const push = function (link) {
+      if (link.closest('.ao3tm-menu, .ao3tm-panel, .ao3tm-bar, .ao3tm-fab, .ao3tm-tools')) return;
+      const info = authorFromHref(link.getAttribute('href'), link.textContent);
+      if (!info.name) return;
+      if (!seen[info.name.toLowerCase()]) {
+        seen[info.name.toLowerCase()] = true;
+        out.push(info.name);
+      }
+      info.aliases.forEach(function (alias) {
+        if (alias && !seen[alias.toLowerCase()]) {
+          seen[alias.toLowerCase()] = true;
+          out.push(alias);
+        }
+      });
+    };
+
+    // 优先按已知容器找（最准）
+    Array.prototype.forEach.call(el.querySelectorAll('li.author, .byline'), function (li) {
       const links = li.querySelectorAll('a[href*="/users/"]');
       if (links.length) {
-        Array.prototype.forEach.call(links, function (a) {
-          const href = a.getAttribute('href') || '';
-          const match = href.match(/\/users\/([^/?#]+)/);
-          const name = decodeURIComponent(match ? match[1] : a.textContent).trim();
-          if (name && !seen[name.toLowerCase()]) {
-            seen[name.toLowerCase()] = true;
-            out.push(name);
-          }
-        });
-      } else {
-        const text = clean(li.textContent).replace(/^(by|de|par|por|von)\s+/i, '');
-        const orphan = text.match(/^\[?orphan_account\]?/i) ? 'orphan_account' : '';
-        if (orphan && !seen[orphan]) {
-          seen[orphan] = true;
-          out.push(orphan);
-        }
+        Array.prototype.forEach.call(links, push);
+        return;
+      }
+      const text = clean(li.textContent).replace(/^(by|de|par|por|von)\s+/i, '');
+      const orphan = text.match(/^\[?orphan_account\]?/i) ? 'orphan_account' : '';
+      if (orphan && !seen[orphan]) {
+        seen[orphan] = true;
+        out.push(orphan);
       }
     });
+
+    // 兜底：直接找卡片里所有作者链接。
+    // 只认 li.author / .byline 会在站点改版或特殊皮肤下漏掉整篇作品，
+    // 表现就是"菜单里没有作者行、作者规则永远不命中"。
+    if (!out.length) {
+      Array.prototype.forEach.call(el.querySelectorAll('a[href*="/users/"]'), push);
+    }
     return out;
   }
 
@@ -143,6 +194,36 @@
       .filter(Boolean);
   }
 
+  /** 卡片上的同人原作（fandom）：AO3 里是 .fandoms 容器内的 a.tag */
+  function blurbFandoms(el) {
+    const out = [];
+    const seen = Object.create(null);
+    Array.prototype.forEach.call(el.querySelectorAll('.fandoms a.tag, .fandoms .tag'), function (link) {
+      if (link.closest('.ao3tm-tag-actions, .ao3tm-any')) return;
+      const text = stripCountSuffix(link.textContent);
+      const key = text.toLowerCase();
+      if (text && !isJunkTag(text) && !seen[key]) {
+        seen[key] = true;
+        out.push(text);
+      }
+    });
+    return out;
+  }
+
+  function pushTag(out, seen, tag) {
+    const text = clean(stripCountSuffix(tag));
+    const key = text.toLowerCase();
+    if (!text || seen[key] || isJunkTag(text)) return;
+    seen[key] = true;
+    out.push(text);
+  }
+
+  /**
+   * 卡片上的全部标签。
+   * 关键：必须**包含同人原作（fandom）**。fandom 在 AO3 里也是 a.tag，
+   * 只不过放在 .fandoms 容器里；如果这里漏掉它，用户按 fandom 建的规则
+   * 就永远匹配不到任何作品（菜单里能看到 fandom 行，但过滤时不认它）。
+   */
   function blurbTags(el) {
     const out = [];
     const seen = Object.create(null);
@@ -153,22 +234,17 @@
       const spans = container.querySelectorAll('.ao3tm-tag[data-tag]');
       if (spans.length) {
         Array.prototype.forEach.call(spans, function (span) {
-          const tag = clean(span.getAttribute('data-tag'));
-          const key = tag.toLowerCase();
-          if (tag && !seen[key]) {
-            seen[key] = true;
-            out.push(tag);
-          }
+          pushTag(out, seen, span.getAttribute('data-tag'));
         });
         return;
       }
       tagsFromContainer(container).forEach(function (tag) {
-        const key = tag.toLowerCase();
-        if (tag && !seen[key]) {
-          seen[key] = true;
-          out.push(tag);
-        }
+        pushTag(out, seen, tag);
       });
+    });
+    // 补上同人原作：blurb 里的 .fandoms 容器不是 .tags
+    blurbFandoms(el).forEach(function (tag) {
+      pushTag(out, seen, tag);
     });
     return out;
   }
@@ -219,12 +295,16 @@
     const out = [];
     const seen = Object.create(null);
     Array.prototype.forEach.call(document.querySelectorAll('.work.meta.group a[href*="/users/"]'), function (a) {
-      const href = a.getAttribute('href') || '';
-      const match = href.match(/\/users\/([^/?#]+)/);
-      const name = decodeURIComponent(match ? match[1] : a.textContent).trim();
-      if (name && !seen[name]) {
-        seen[name] = true;
-        out.push(name);
+      const info = authorFromHref(a.getAttribute('href'), a.textContent);
+      if (info.name && !seen[info.name]) {
+        seen[info.name] = true;
+        out.push(info.name);
+        info.aliases.forEach(function (alias) {
+          if (alias && !seen[alias]) {
+            seen[alias] = true;
+            out.push(alias);
+          }
+        });
       }
     });
     if (!out.length) {
@@ -306,6 +386,8 @@
     authorsOf: authorsOf,
     parseTagText: parseTagText,
     blurbTags: blurbTags,
+    blurbFandoms: blurbFandoms,
+    authorNameFromHref: authorNameFromHref,
     workPageTags: workPageTags,
     workPageTagNames: workPageTagNames,
     workPageAuthors: workPageAuthors,

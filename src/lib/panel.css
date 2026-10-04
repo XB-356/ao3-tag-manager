@@ -1062,6 +1062,18 @@ a.ao3tm-tag-only {
   font-weight: 600;
 }
 
+/* 菜单里的提示行（例如没识别到作者时） */
+.ao3tm-menu-note {
+  margin: 2px 4px 6px;
+  padding: 6px 8px;
+  border-left: 3px solid var(--ao3tm-accent);
+  border-radius: 3px;
+  background: var(--ao3tm-accent-tint);
+  color: var(--ao3tm-text);
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+
 .ao3tm-menu-row {
   display: flex;
   align-items: center;
