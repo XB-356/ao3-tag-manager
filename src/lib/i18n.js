@@ -236,6 +236,12 @@
     'which offers shelter to at-risk fannish projects and archives. Through several subprojects, they preserve different kinds of fanworks and artifacts of fan culture.': '为面临风险的同类项目与存档提供庇护。通过多个子项目，他们保存各种形式的同人作品与同人文化产物。',
     'For questions or reports about violations of the AO3': '如需就违反 AO3',
     'contact Communications': '联系传播团队',
+    // —— 关于我们：整段整句翻译（碎片拼接会出现语病，用户反馈）——
+    'AO3 is built upon the principle of maximum inclusiveness of fanwork content. Fanworks that do not violate the Content Policy or some other part of the Terms of Service will not be removed from AO3, even if someone believes they are offensive or objectionable.': 'AO3 建立在「尽可能广泛地收录同人作品」这一原则之上。只要不违反内容政策或服务条款的其他部分，作品就不会被移出 AO3——即使有人认为它们冒犯或令人反感。',
+    'AO3 runs on open-source archiving software developed by the Organization for Transformative Works (OTW). Anyone is welcome to contribute by working on the unclaimed tasks in our Jira project.': 'AO3 运行在由 OTW（再创作组织）开发的开源存档软件之上。欢迎任何人参与贡献，从我们的 Jira 项目中认领任务即可。',
+    'AO3 entered open beta in November 2009 and exited beta in April 2026. You can read more about AO3\'s history on Fanlore.': 'AO3 于 2009 年 11 月进入公开测试，2026 年 4 月结束测试。你可以在 Fanlore 上了解更多 AO3 的历史。',
+    'Behind the scenes, AO3 is run by volunteers serving on committees, which collaborate to support AO3 in different ways:': 'AO3 由志愿者在幕后运营，他们任职于各委员会，从不同方面协作支持 AO3：',
+    'The OTW is a 501(c)(3) non-profit organization, fully supported by donations and run by and for fans. The OTW\'s mission is to preserve and protect transformative fanworks and fan culture in their myriad forms. We believe that fanworks are transformative and that transformative works are legitimate.': 'OTW 是 501(c)(3) 非营利组织，完全依靠捐赠运营，由同人爱好者创办、也为他们服务。OTW 的使命是保存并保护形态各异的再创作同人作品与同人文化。我们相信同人作品具有再创作性质，而再创作作品是正当的。',
     'Tag:': '标签：',
     'Go': '筛选',
     'RSS Feed': 'RSS 订阅',

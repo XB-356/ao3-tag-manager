@@ -1,21 +1,29 @@
-fix(i18n): 处理"关于我们"页孤立的 The + 译文前导空格（1.2.3.14）
+fix(i18n): 关于我们页改为整段整句翻译，修掉碎片拼接的语病（1.2.3.15）
 
-用户圈出首段显示 "The AO3（Archive of Our Own）（AO3）是一个非营利…"。
+用户反馈"有的替换有语病"，例如：
+  "你可以在 Fanlore 上的 AO3 历史"   ← 句子没结束
+  "AO3 建立在这样一个原则之上： 尽可能广泛地收录同人作品 不违反 内容政策…"
 
-根因：AO3 把首段的定冠词单独切成了一个文本节点：
-    <p> The <a>Archive of Our Own</a> (AO3) is a non-profit…</p>
-  · " The " 是独立节点，中文里没有对应词
-  · 后半段节点译文以中文开头、又没有前导空格，于是中文紧贴链接
+根因：之前按"节点片段"逐条收录，段落被 <a> 链接切碎后，
+每段各翻一半，拼起来语法不通顺。
 
-改动：
-- translateTextNode 增加特例：当节点内容恰为 The/the、且**前一个兄弟是
-  a/cite/em/strong 元素**时，把它替换为一个空格（去掉英文、保留间距）。
-  严格限定结构，避免误伤 "The Big Bang…"/"The Hobbit"/"The OTW is Recruiting…"
-  这类标题 —— 已加 5 条反向断言。
-- 译文以中文开头且原文有前导空白时，补一个空格，修
-  "Open Doors（开放之门），把濒危…" 这种紧贴链接的排版。
+改动：为关于我们页的 5 个整段加入"整段 key"（优先级高于片段）：
+- AO3 is built upon the principle of maximum inclusiveness of fanwork content… →
+  AO3 建立在「尽可能广泛地收录同人作品」这一原则之上。只要不违反内容政策或
+  服务条款的其他部分，作品就不会被移出 AO3——即使有人认为它们冒犯或令人反感。
+- AO3 runs on open-source archiving software… →
+  AO3 运行在由 OTW（再创作组织）开发的开源存档软件之上。欢迎任何人参与贡献，
+  从我们的 Jira 项目中认领任务即可。
+- AO3 entered open beta in November 2009… →
+  AO3 于 2009 年 11 月进入公开测试，2026 年 4 月结束测试。
+  你可以在 Fanlore 上了解更多 AO3 的历史。
+- Behind the scenes, AO3 is run by volunteers serving on committees… →
+  AO3 由志愿者在幕后运营，他们任职于各委员会，从不同方面协作支持 AO3：
+- The OTW is a 501(c)(3) non-profit organization… →
+  OTW 是 501(c)(3) 非营利组织，完全依靠捐赠运营，由同人爱好者创办、也为他们服务。
+  OTW 的使命是保存并保护形态各异的再创作同人作品与同人文化。
+  我们相信同人作品具有再创作性质，而再创作作品是正当的。
 
-测试：
-- 新增 test/i18n-the.js（9 项）：5 条"含 The 的标题不得被动" +
-  首段后半句整段翻译 + Open Doors 说明等
-- 全部套件：71/25/50/9(the)/19/17/15/9 + comment 22/22
+清理：移除重复的 'The OTW is a 501…' 与 'AO3 is built upon…' 键。
+
+测试：全部套件通过 —— 71/25/50/19/17/15/9 + 9(the) + comment 22/22
