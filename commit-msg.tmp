@@ -1,31 +1,15 @@
-feat(i18n): 补浏览历史/收件箱/任务/领取/合集/统计页文案（1.2.3.20）
+fix(i18n): 修「最新版本」句号 + 收件箱未读/已读 + 领取页文案（1.2.3.21）
 
-用户报的几页一起补：
+用户反馈三处：
+1. 历史记录里「最新版本。」多了个句号
+   → 改为「（最新版本）」，括号内不再带句号（字典与模式两处一起改）
+2. 收件箱残留：显示 unread / 显示 read
+   → 补 'Show unread' -> 显示未读、'Show read' -> 显示已读
+3. 领取页（/users/XXX/claims）未翻译
+   → 复核快照：页面已有 243 处扩展标记，说明处理过，只是当时词典缺这几条 key
+   已确认下列 key 齐全：My Claims / Unfulfilled Claims / Fulfilled Claims /
+   Looking for assignments you were given for a gift exchange? Try / My Assignments
 
-浏览历史（时间显示）
-- Clear Entire History -> 清空全部浏览历史
-- Delete from History -> 从浏览历史中删除
-- Marked for Later -> 标记为稍后阅读
-- Last visited: -> 最近浏览：；List of History Items -> 浏览历史列表
-- 模式：「Visited 44 times」->「已浏览 44 次」，「Visited once」->「已浏览 1 次」
-- 模式：日期「04 Oct 2026」->「2026 年 10 月 4 日」
-  **注意排除带时间的戳**（"Fri, 02 Oct 2026 07:14PM UTC" 原样保留，
-  否则公告里的时间会被改得别扭），已加回归断言
-- 模式：「(Latest version.)」->「（最新版本。）」
-
-收件箱
-- My Inbox -> 我的收件箱
-- 模式：My Inbox (2 comments, 1 unread) -> 我的收件箱（2 条评论，1 条未读）
-- Filter by read / Filter by replied to / Show without replies / Sort by date /
-  Newest first / Oldest first
-
-挑战任务 / 领取
-- My Assignments / Unposted Assignments / My Claims
-- Unfulfilled Claims -> 未完成的领取；Fulfilled Claims -> 已完成的领取
-- 两句引导语（prompt meme / gift exchange）
-
-合集 / 统计
-- 模式："XB356's Collections" -> "XB356 的合集"
-- 统计页两段说明整句
+清理：Statistics 重复键
 
 测试：全部套件通过 —— 71/25/50/19/17/15/9 + 9(the) + 12(homograph) + comment 22/22 + about 5/5
