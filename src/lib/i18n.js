@@ -228,6 +228,14 @@
     'For technical help using AO3, including bug reports and feature requests, please': '如需 AO3 使用上的技术支持（含问题反馈与功能建议），请',
     'contact Policy & Abuse': '联系政策与滥用处理团队',
     '. If you have any other questions, please': '。如有其他问题，请',
+    // —— 关于我们：整段正文（之前漏收，因为以空格/小写开头，审计脚本没列出来）——
+    'Archive of Our Own': 'AO3（Archive of Our Own）',
+    '(AO3) is a non-profit, non-commercial fanwork archive for transformative fanworks; created by and for fans of books, music, art, games, shows, movies, real-person fiction (RPF), and other fandoms.': '（AO3）是一个非营利、非商业的同人作品存档站，收录再创作同人作品；它由同人爱好者创建，也为书籍、音乐、美术、游戏、剧集、电影、真人同人（RPF）及其他同人圈的爱好者服务。',
+    'addresses questions and reports about potential violations of the AO3': '负责处理有关可能违反 AO3',
+    'which is committed to protecting and defending fanworks from commercial exploitation and legal challenges. They also strive to educate fans about developments in law that could affect fandom.': '致力于保护并捍卫同人作品，使其免受商业剥削与法律挑战。他们也努力让同人爱好者了解可能影响同人圈的法律动向。',
+    'which offers shelter to at-risk fannish projects and archives. Through several subprojects, they preserve different kinds of fanworks and artifacts of fan culture.': '为面临风险的同类项目与存档提供庇护。通过多个子项目，他们保存各种形式的同人作品与同人文化产物。',
+    'For questions or reports about violations of the AO3': '如需就违反 AO3',
+    'contact Communications': '联系传播团队',
     'Tag:': '标签：',
     'Go': '筛选',
     'RSS Feed': 'RSS 订阅',
@@ -396,7 +404,6 @@
     'Follow AO3 on Bluesky or Tumblr for status updates, and don\'t forget to check out the': '关注 AO3 的 Bluesky 或 Tumblr 获取状态更新，也别忘了看看',
     'for updates on our other projects!': '，了解其他项目的进展！',
     'OTW': 'OTW',
-    'Archive of Our Own': 'AO3（Archive of Our Own）',
     // —— 作品页 / 发布与编辑（来自 AO3 官方 locale: works.*）——
     'Associations': '关联作品',
     'This work could have adult content. If you continue, you have agreed that you are willing to see such content.': '这篇作品可能包含成人内容。继续访问即表示你同意查看此类内容。',
