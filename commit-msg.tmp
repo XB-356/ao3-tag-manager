@@ -1,29 +1,19 @@
-fix(i18n): 关于我们页改为整段整句翻译，修掉碎片拼接的语病（1.2.3.15）
+fix(i18n): 关于我们页补齐被 strong/a 切碎的节点键（1.2.3.16）
 
-用户反馈"有的替换有语病"，例如：
-  "你可以在 Fanlore 上的 AO3 历史"   ← 句子没结束
-  "AO3 建立在这样一个原则之上： 尽可能广泛地收录同人作品 不违反 内容政策…"
+用户反馈"重启+重载后还是老样子"。排查确认：
+- 加载来源确为 D:\DSH\ao3（磁盘上已是 1.2.3.15）
+- 用户存的 HTML 处于"多次翻译叠加"的中间状态：
+  同一个 <p> 里有的节点已翻、有的没翻，还残留 "The"
 
-根因：之前按"节点片段"逐条收录，段落被 <a> 链接切碎后，
-每段各翻一半，拼起来语法不通顺。
+真正原因：该页段落被 <strong> 和 <a> 反复切碎，之前只收录了部分碎片键，
+另一些碎片（"Fanworks that do not violate the"、". Fanworks that do not violate the"、
+"or some other part of the"、"developed by the OTW…"、"by working on the unclaimed
+tasks in our"、"AO3's history on Fanlore" 等）没有节点级 key，
+所以整段虽然加了"整段 key"，但页面上永远匹配不到（整段文字从不落在同一文本节点）。
 
-改动：为关于我们页的 5 个整段加入"整段 key"（优先级高于片段）：
-- AO3 is built upon the principle of maximum inclusiveness of fanwork content… →
-  AO3 建立在「尽可能广泛地收录同人作品」这一原则之上。只要不违反内容政策或
-  服务条款的其他部分，作品就不会被移出 AO3——即使有人认为它们冒犯或令人反感。
-- AO3 runs on open-source archiving software… →
-  AO3 运行在由 OTW（再创作组织）开发的开源存档软件之上。欢迎任何人参与贡献，
-  从我们的 Jira 项目中认领任务即可。
-- AO3 entered open beta in November 2009… →
-  AO3 于 2009 年 11 月进入公开测试，2026 年 4 月结束测试。
-  你可以在 Fanlore 上了解更多 AO3 的历史。
-- Behind the scenes, AO3 is run by volunteers serving on committees… →
-  AO3 由志愿者在幕后运营，他们任职于各委员会，从不同方面协作支持 AO3：
-- The OTW is a 501(c)(3) non-profit organization… →
-  OTW 是 501(c)(3) 非营利组织，完全依靠捐赠运营，由同人爱好者创办、也为他们服务。
-  OTW 的使命是保存并保护形态各异的再创作同人作品与同人文化。
-  我们相信同人作品具有再创作性质，而再创作作品是正当的。
+改动：
+- 按快照里真实出现的节点边界补齐全部碎片键
+- 保留整段 key 作为兜底（当 AO3 改为整段输出时仍可用）
 
-清理：移除重复的 'The OTW is a 501…' 与 'AO3 is built upon…' 键。
-
-测试：全部套件通过 —— 71/25/50/19/17/15/9 + 9(the) + comment 22/22
+验证：13 个真实节点键逐条命中（仅 "The" 由结构规则处理，
+不在 translate() 内），全部套件通过 —— 71/25/50/19/17/15/9 + 9(the) + comment 22/22

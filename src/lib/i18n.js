@@ -166,9 +166,15 @@
     '. If you need more help, please': '。如果需要更多帮助，请',
     // —— 关于我们（About AO3 and the OTW）：段落被链接切碎，按节点边界收录 ——
     'AO3 is built upon the principle of': 'AO3 建立在这样一个原则之上：',
+    // 段落被 <strong>/<a> 切碎后，这些碎片是各自独立的文本节点，必须按节点收录
+    'Fanworks that do not violate the': '只要不违反',
+    '. Fanworks that do not violate the': '。只要不违反',
+    'or some other part of the': '或服务条款其他部分的',
+    'will not be removed from AO3, even if someone believes they are offensive or objectionable.': '作品不会被移出 AO3——即使有人认为它们冒犯或令人反感。',
+    'developed by the Organization for Transformative Works (OTW). Anyone is welcome to': '由 OTW（再创作组织）开发。欢迎任何人',
+    'by working on the unclaimed tasks in our': '，从我们的',
+    'AO3\'s history on Fanlore': 'Fanlore 上的 AO3 历史',
     'maximum inclusiveness of fanwork content': '尽可能广泛地收录同人作品',
-    'Fanworks that do not violate the': '不违反',
-    'or some other part of the': '或其他部分条款的',
     'will not be removed from AO3, even if someone believes they are offensive or objectionable.': '的同人作品不会被移出 AO3，即使有人认为它们冒犯或令人反感。',
     'AO3 runs on': 'AO3 运行在',
     'open-source archiving software': '开源存档软件',
