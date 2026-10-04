@@ -1259,6 +1259,16 @@
     'Terms of Service (opens in new window)': '服务条款（在新窗口打开）',
     'Yes, I am at least 13.': '是的，我已满 13 岁。',
     'You need to be at least 13 years old to become a registered member of the Archive. (Sorry to anyone younger! You\'ll be more than welcome when the time comes.)': '你需要年满 13 岁才能注册成为本站会员。（对更年轻的朋友先说声抱歉！等你满 13 岁，我们非常欢迎你。）',
+    // —— 页脚 / 导入作品 / 新闻页补充（界面区审计发现）——
+    'by the': '由',
+    'Page Summary': '页面摘要',
+    'Help & Info for Users': '用户帮助与信息',
+    'where to find us': '在哪里找到我们',
+    'The creator\'s summary is added automatically.': '创作者的摘要会自动添加。',
+    'The creator\'s tags are added automatically.': '创作者的标签会自动添加。',
+    'Comma separated, 150 characters per tag': '用逗号分隔，每个标签最多 150 个字符',
+    'For a work in the Archive, only the URL is required.': '如果作品已在本站，只需填写网址。',
+    'Choose one of your existing series:': '选择一个已有的系列：',
     'Error': '出错了',
     'Success': '成功'
   };
@@ -1427,7 +1437,7 @@
   let textNodeEl = null;
 
   /** 极短高危词：只允许在表单标签元素里翻译（见 translateTextNode） */
-  const UI_ONLY_KEYS = { 'From': 1, 'To': 1 };
+  const UI_ONLY_KEYS = { 'From': 1, 'To': 1, 'by the': 1 };
   /** 已经翻译过的文本节点（用 WeakSet，避免 DOM 标记带来的误判） */
   const doneNodes = new WeakSet();
   let running = false;
