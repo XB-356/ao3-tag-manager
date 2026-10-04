@@ -259,6 +259,21 @@
     'post a new work': '发布新作品',
     'or maybe': '或者',
     'a new bookmark': '新书签',
+    // —— 书签筛选侧栏（个人页 → 书签 / 书签搜索）——
+    'Ratings': '分级',
+    'Other work tags to include': '要包含的其他作品标签',
+    'Other work tags to exclude': '要排除的其他作品标签',
+    'Other bookmarker\'s tags to include': '要包含的其他收藏者标签',
+    'Other bookmarker\'s tags to exclude': '要排除的其他收藏者标签',
+    'More Options': '更多选项',
+    'Bookmark types': '收藏类型',
+    'Search bookmarker\'s tags and notes': '搜索收藏者的标签与注释',
+    'Recs only': '仅推荐',
+    'Only bookmarks with notes': '仅含有注释的书签',
+    'List of Bookmarks': '书签列表',
+    'Top of Bookmark Index': '回到书签索引顶部',
+    'From': '从',
+    'To': '至',
     // —— 搜索结果页 ——
     'Search Results': '搜索结果',
     'Edit Your Search': '编辑搜索条件',
@@ -1277,6 +1292,9 @@
   let timer = null;
   /** 当前处理的文本节点所属元素：片段替换只允许在界面元素里发生 */
   let textNodeEl = null;
+
+  /** 极短高危词：只允许在表单标签元素里翻译（见 translateTextNode） */
+  const UI_ONLY_KEYS = { 'From': 1, 'To': 1 };
   /** 已经翻译过的文本节点（用 WeakSet，避免 DOM 标记带来的误判） */
   const doneNodes = new WeakSet();
   let running = false;
@@ -1700,6 +1718,15 @@
     const original = node.nodeValue;
     const trimmed = original.trim();
     if (!trimmed) return false;
+
+    // 极短的高危词（From / To 这类）：只允许在表单标签元素里翻译。
+    // 否则作品名/标签恰好叫 "From" 就会被改成"从"。
+    if (UI_ONLY_KEYS[trimmed]) {
+      const host = node.parentElement;
+      const tag = host && host.tagName;
+      const inForm = host && host.closest && host.closest('label, dt, dd, form');
+      if (tag !== 'LABEL' && !inForm) return false;
+    }
 
     // 特例：AO3 在「关于我们」页把首段的定冠词单独切成了一个文本节点：
     //     <p> The <a>Archive of Our Own</a> (AO3) is a non-profit…</p>

@@ -1,32 +1,31 @@
-fix(i18n): 个人主页横幅残留英文 + 建立全量测试运行器（1.2.3.31）
+feat(i18n): 补齐书签筛选侧栏（1.2.3.32）
 
-用户报横幅第二句仍有英文残留：
-    If you experience harassment or have questions about our 服务条款 …
+用户报个人页→书签的筛选侧栏多处未翻译。用 audit-ui 全页审计后补齐：
+- Ratings -> 分级
+- Other work tags to include / exclude -> 要包含/排除的其他作品标签
+- Other bookmarker's tags to include / exclude -> 要包含/排除的其他收藏者标签
+- More Options -> 更多选项
+- Bookmark types -> 收藏类型（原先只翻了半截，显示"收藏 types"）
+- Search bookmarker's tags and notes -> 搜索收藏者的标签与注释
+- Recs only -> 仅推荐
+- Only bookmarks with notes -> 仅含有注释的书签
+- List of Bookmarks -> 书签列表
+- Top of Bookmark Index -> 回到书签索引顶部
 
-真因：该文本节点在真实 DOM 里**以 ". " 开头**
-（前一个链接 <a>联系我们的支持团队</a> 后面的句号并入了本节点），
-所以 trimmed 是 ". If you experience harassment or have questions about our"，
-和词条 "If you experience harassment…" 对不上。
+新增 UI_ONLY_KEYS 机制：From / To 这类极短词只在表单标签元素里翻译
+（作品名恰好叫 "From" 时不能被改成"从"）。
 
-补齐：
-- ". If you experience harassment or have questions about our"
-  -> "。如果你遭遇骚扰，或对我们的"（连句号一起收词）
-- "(including the" -> "（包括"；")," -> "），"
-- translateTextNode 增加"孤立句号"处理：文本恰好是 "." 且前一个兄弟节点
-  以中文结尾时，转成中文句号（避免「处理团队.」这种英文句号）
-- 模式：中文字符后的英文句号 -> 中文句号（不影响 URL/英文句子）
+审计结论：该页剩余"词典缺"项均为语言名与站点皮肤名
+（af Soomaali / American Sign Language / Default / Reversi / Snow Blue 等），
+按既定原则不翻译。
 
-【流程修复 —— 这才是根本问题】
-排查时发现 test/i18n-banner.js **早就存在**，而且正好覆盖这次的横幅回归，
-但我此前几轮跑测试时**从没跑过它**（只跑 run/theme-i18n/comment/about）。
-也就是说：这次"问题又回来了"本可以在提交前就被自己的测试拦住。
+【重要】过程中我犯了一个严重错误并已修复：
+把 UI_ONLY_KEYS 检查插到了 `const trimmed` 定义**之前**，触发 TDZ
+（Cannot access 'trimmed' before initialization），导致**整个汉化功能崩溃**。
+是全量运行器 test/all.js 立刻暴露了它（theme-i18n / comment / about /
+banner / media 五个浏览器测试同时超时），修复后 15/15 全绿。
 
-因此新增 test/all.js 全量运行器：
-- 自动跑全部 15 个测试文件（含此前漏跑的 i18n-banner / detect-browser /
-  mirror-userscript），浏览器测试之间会自动清理遗留 headless Chrome
-- 输出每个文件通过数与耗时，任一失败即非零退出
+这也验证了上一轮建立全量运行器的价值：如果还按以前"挑着跑"，
+这个问题会直接被打包发出去。
 
-结果：15/15 个测试文件通过（71/25/69/22/19/17/15/12/10/9/9/5/5/4/22）
-
-另外：恢复被误覆盖的 test/mock/profile.html（theme-i18n 依赖它），
-并清掉 git 里的 commit-msg.tmp。
+测试：node test/all.js -> 15/15 个测试文件通过
