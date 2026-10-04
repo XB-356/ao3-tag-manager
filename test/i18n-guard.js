@@ -60,6 +60,27 @@ mustNotChange.forEach((text) => {
   check('tip 只翻标签、查询保留：' + JSON.stringify(text.slice(0, 34)), out === want, out);
 });
 
+/** 个人主页：整句被 <a> 切碎后的**真实文本节点**，必须有整段词条
+    （长节点既匹配不到整句、又被片段替换守卫挡住，曾表现为半英半中"问题又回来了"） */
+const profileNodes = [
+  ["Hi! It looks like you've just logged in to AO3 for the first time. For help getting started on AO3, check out some",
+    '你好！看起来这是你第一次登录 AO3。想上手 AO3，可以看看'],
+  ['or browse through', '也可以翻翻'],
+  ['If you need technical support,', '如果你需要技术支持，'],
+  ['contact our Support team', '联系我们的支持团队'],
+  ['If you experience harassment or have questions about our', '如果你遭遇骚扰，或对我们的'],
+  ['and', '与'],
+  ['please contact our Policy & Abuse team.', '请联系我们的政策与滥用处理团队。'],
+  ["You don't have anything posted under this name yet. Would you like to", '你在这个笔名下还没有发布任何内容。要不要'],
+  ['post a new work', '发布新作品'],
+  ['or maybe', '或者'],
+  ['a new bookmark', '新书签']
+];
+profileNodes.forEach(([text, want]) => {
+  const out = i18n.translate(text);
+  check('个人主页节点必须翻译：' + JSON.stringify(text.slice(0, 40)), out === want, out);
+});
+
 /** 这些是真正的界面文案，必须翻译（防止上面的保护把正常翻译也挡掉） */
 const mustChange = [
   ['Terms of Service', '服务条款'],

@@ -240,6 +240,20 @@
     'Is it later already?': '已经是稍后了吗？',
     'Some works you\'ve marked for later.': '你标记为稍后阅读的一些作品。',
     'Search and Browse FAQ': '搜索与浏览常见问题',
+    // —— 个人主页 / 首次登录欢迎横幅 ——
+    // AO3 把整句用 <a> 切成了多个文本节点，必须按**节点边界**收词，
+    // 否则长的那几段既匹配不到整句、又被"片段替换守卫"挡住，表现为半英半中。
+    'Hi! It looks like you\'ve just logged in to AO3 for the first time. For help getting started on AO3, check out some': '你好！看起来这是你第一次登录 AO3。想上手 AO3，可以看看',
+    'or browse through': '也可以翻翻',
+    'If you need technical support,': '如果你需要技术支持，',
+    'contact our Support team': '联系我们的支持团队',
+    'If you experience harassment or have questions about our': '如果你遭遇骚扰，或对我们的',
+    'and': '与',
+    'please contact our Policy & Abuse team.': '请联系我们的政策与滥用处理团队。',
+    'You don\'t have anything posted under this name yet. Would you like to': '你在这个笔名下还没有发布任何内容。要不要',
+    'post a new work': '发布新作品',
+    'or maybe': '或者',
+    'a new bookmark': '新书签',
     // —— 搜索结果页 ——
     'Search Results': '搜索结果',
     'Edit Your Search': '编辑搜索条件',
@@ -341,19 +355,14 @@
     // 整句 key 匹配不上任何一个节点，所以必须按"节点边界片段"逐条收录
     'check out some': '看看这些',
     '想上手 AO3, check out some': '想上手 AO3，看看这些',
-    'or browse through': '也可以翻翻',
     'our FAQs': '常见问题',
-    'If you experience harassment or have questions about our': '如果你遭遇骚扰，或对',
     'Terms of Service (including the': '服务条款（包括',
     // 连接词 and 只作整段匹配，译文用「与」；
     // 不要用顿号：说明性文字（"character, and additional tags"）会被破坏
-    'and': '与',
     'Content Policy and Privacy Policy': '内容政策与隐私政策',
     'contact our Policy & Abuse team': '请联系我们的政策与滥用处理团队',
     'publish a new work': '发布新作品',
     'publish': '发布',
-    'If you need technical support,': '如果你需要技术支持，',
-    'contact our Support team': '联系我们的支持团队',
     'About the Archive': '关于本站',
     // 「About」会被单独替换成"关于"，于是 "About Us" 变成 "关于 Us"。
     // 凡是 About / All 开头的站点短语都必须有完整词条（原文取自官方 locale views/en.yml）。
@@ -943,7 +952,6 @@
     'Dismiss': '忽略',
     'Dismiss permanently': '不再提示',
     'a new work': '新作品',
-    'a new bookmark': '新书签',
     'Pseuds': '笔名',
     'Pseud': '笔名',
     'Bio': '简介',

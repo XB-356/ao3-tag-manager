@@ -1,34 +1,38 @@
-fix(i18n): 用户数据总闸 + 搜索结果页文案（1.2.3.29）
+fix(i18n): 个人主页欢迎横幅等被 <a> 切碎的句子补节点级词条（1.2.3.30）
 
-用户报同人圈列表再出现乱替换：The 100 Series -> The 100 个系列。
+用户报个人主页半英半中"问题又回来了"：
+    Hi! It looks like you've just logged in to AO3 ... check out some
+        给新用户的实用提示 也可以翻翻 常见问题.
+    如果你需要技术支持， 联系我们的支持团队. If you experience harassment ...
+    You don't have anything posted under this name yet. ... or maybe 新书签?
 
-根因（这次找到了真正的漏网路径）：
-"Series" 不是被片段替换改掉的，而是被 **PATTERNS 正则**改掉的
-    [/\b(\d[\d,]*)\s+Series\b/g, '$1 个系列']
-而上一轮的"界面区域白名单"只作用于 translateCompound / translateInlinePhrases
-两条路径，**PATTERNS 完全没被约束**；且公共出口
-    translate: (text) => lookup(text) || applyPatterns(text)
-也是无条件跑 PATTERNS。
+根因（两个叠加）：
+1. AO3 把整句用 <a> 切成多个文本节点，长的那几段没有整段词条
+2. 上一轮加的"片段替换守卫"（长句/非界面区不做片段替换）把这些长节点
+   挡掉了 —— 守卫是对的，但**缺少节点级整段词条**，于是保持英文
 
-修法（两道）：
-1. KEEP_USER_CONTENT 增加用户数据容器整块跳过：
-   ul.fandom / ul.fandoms / .fandom.index / .fandoms.index / ul.tag /
-   .tag.index / ul.work.index / .work.blurb / li.blurb /
-   .bookmark.blurb / .series.blurb / .collection.blurb /
-   .summary.module / .tag.set
-2. 新增 looksLikeUserData() 总闸，PATTERNS 与 translate() 出口都先过它：
-   - "名称 - 作者"（系列/作品列表条目形态）
-   - "<数字> Series/Trilogy/Saga"
-   - "The <数字> …" 开头的短名称
-   注意不能写成"任何数字开头"，否则 "1,244 Found" 这类统计文案会被误挡。
+关键点：整段命中（lookup）走的是精确匹配，不受守卫影响，
+所以正确做法是**按真实节点边界逐段收词**。
 
-同时补搜索结果页：
-- Search Results -> 搜索结果；Edit Your Search -> 编辑搜索条件
-- 模式："You searched for: X sort by: Y descending"
-  -> 你搜索了：X 排序：Y 降序（查询词原样保留）
-- 模式："1,244 Found" -> 找到 1,244 条
+补齐（12 条节点级词条）：
+- Hi! It looks like you've just logged in to AO3 … check out some
+  -> 你好！看起来这是你第一次登录 AO3。想上手 AO3，可以看看
+- or browse through -> 也可以翻翻
+- If you need technical support, -> 如果你需要技术支持，
+- contact our Support team -> 联系我们的支持团队
+- If you experience harassment or have questions about our -> 如果你遭遇骚扰，或对我们的
+- and -> 与
+- please contact our Policy & Abuse team. -> 请联系我们的政策与滥用处理团队。
+- You don't have anything posted under this name yet. Would you like to
+  -> 你在这个笔名下还没有发布任何内容。要不要
+- post a new work -> 发布新作品
+- or maybe -> 或者
+- a new bookmark -> 新书签
 
-回归：guard 从 53 增到 58，新增 5 条同人圈/系列列表条目断言
-（The 100 Series - Kass Morgan、100 Cupboards Series… 等必须原样）。
-测试：全部套件通过 —— 71/25/58/19/17/15/9 + 9(the) + 12(homograph)
+修复一处**旧词条错误**：'If you experience harassment or have questions
+about our' 旧值是不完整的"如果你遭遇骚扰，或对"（早期 slice 逻辑的残留），
+且因位于文件更后面而覆盖了新值 —— 已删除旧条目。
+
+回归：guard 从 58 增到 69，新增 11 条个人主页节点断言，避免再次"回来"。
+测试：全部套件通过 —— 71/25/69/19/17/15/9 + 9(the) + 12(homograph)
       + comment 22/22 + about 5/5 + media 4/4
