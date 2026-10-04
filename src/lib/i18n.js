@@ -777,7 +777,10 @@
     '#main .summary',
     '#main .comment',
     '.comment',
-    '.comment-form',
+    // 注意：**不能**把 .comment-form 整个跳过。
+    // 评论表单里除了用户输入（textarea 已单独跳过）还有大量界面文案：
+    // Post Comment / Comment as / Plain text with limited HTML / 评论审核提示 等，
+    // 一旦整块跳过，评论区就永远是英文（踩过这个坑）。
     '.kudos',
     // 个人资料页的简介正文：AO3 用的是 .bio .userstuff，
     // 注意不能把整个 .userstuff 一刀切，否则资料页的界面元素也全被跳过
@@ -857,6 +860,22 @@
     if (/[.!?]\s+[A-Za-z]/.test(value)) return true;
     if (value.length > 60) return true;
     return false;
+  }
+
+  /**
+   * 和 lookup 一样，但额外返回"命中的是哪条 key"。
+   * 调用方需要知道原文里被消费掉的长度（译文长度和原文长度不一样）。
+   */
+  function lookupWithKey(text) {
+    if (typeof text !== 'string') return null;
+    const key = text.replace(/\s+/g, ' ').trim();
+    if (!key) return null;
+    if (Object.prototype.hasOwnProperty.call(PHRASES, key)) return { key: key, value: PHRASES[key] };
+    const lower = key.toLowerCase();
+    const found = Object.keys(PHRASES).filter(function (k) {
+      return k.toLowerCase() === lower;
+    })[0];
+    return found ? { key: found, value: PHRASES[found] } : null;
   }
 
   function applyPatterns(text) {
@@ -1090,22 +1109,26 @@
     const trimmed = original.trim();
     if (!trimmed) return false;
 
-    const exact = lookup(trimmed);
-    let next = exact;
+    // 用 lookupWithKey 拿到"命中的是原文里的哪一段"，
+    // 剩余部分要按**原文的字符位置**切，不能按译文长度切——
+    // 按译文长度切会把英文尾巴切错（曾导致 "Donate or Volunteer"
+    // 变成 "捐赠或参与志愿或 Volunteer"）。
+    const hit = lookupWithKey(trimmed);
+    let next = hit ? hit.value : null;
+    let rest = hit ? trimmed.slice(hit.key.length) : '';
     if (!next) {
       const patterned = applyPatterns(trimmed);
-      if (patterned !== trimmed) next = patterned;
+      if (patterned !== trimmed) {
+        next = patterned;
+        rest = '';
+      }
     }
     // 命中前缀后，把剩下的部分也翻掉。
     // AO3 常把一个 <p> 的文字和链接连在同一个文本节点里，
-    // 例如 "Hi! … for the first time. For help getting started on AO3, check out some<a>…</a>"，
-    // 整段匹配只能命中前半句，剩下半句如果不管就永远留在英文。
-    if (next && next !== trimmed) {
-      const rest = trimmed.slice(next.length);
-      if (rest && /[A-Za-z]{3}/.test(rest) && !looksLikeRichText(rest)) {
-        const restTranslated = translateCompound(rest) || translateInlinePhrases(rest);
-        if (restTranslated) next = next + restTranslated;
-      }
+    // 例如 "Hi! … for the first time. For help getting started on AO3, check out some<a>…</a>"。
+    if (next && rest && /[A-Za-z]{3}/.test(rest) && !looksLikeRichText(rest)) {
+      const restTranslated = translateCompound(rest) || translateInlinePhrases(rest);
+      if (restTranslated) next = next + restTranslated;
     }
     // 像是用户内容/富文本（标题、公告正文、筛选语法）时，
     // 只认"整段命中"，不做分段与内嵌替换 ——

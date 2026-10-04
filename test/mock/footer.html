@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="generator" content="OTW Archive 0.9.374" />
+    <title>footer mock</title>
+  </head>
+  <body>
+    <div id="header"><strong>Archive of Our Own</strong></div>
+    <div id="main" role="main">
+      <!-- 评论表单（结构与真实 AO3 一致：外层 form.comment-form 就是漏翻的元凶） -->
+      <form class="comment-form" id="comments_placeholder_for_test" action="/comments" method="post">
+        <fieldset>
+          <legend>Post Comment</legend>
+          <p class="notice">This work's creator has chosen to moderate comments on the work. Your comment will not appear until it has been approved by the creator.</p>
+          <h4 class="heading">Comment as <span class="byline">XB356</span></h4>
+          <p class="footnote">Plain text with limited HTML <a class="help symbol question modal" aria-label="Html help" href="/help/html"><span class="symbol question"><span>?</span></span></a></p>
+          <textarea id="comment_content" name="comment[comment_content]"></textarea>
+          <span role="alert" class="LV_validation_message LV_invalid">Brevity is the soul of wit, but we need your comment to have text in it.</span>
+          <p class="submit actions"><input type="submit" value="Comment" class="button"></p>
+        </fieldset>
+      </form>
+
+      <!-- 与真实 AO3 页脚一致的节点结构 -->
+      <footer id="footer" role="contentinfo">
+        <div class="module">
+          <h3 class="heading">Contact Us</h3>
+          <ul>
+            <li><a href="/abuse_reports/new">Policy Questions &amp; Abuse Reports</a></li>
+            <li><a href="/support">Technical Support &amp; Feedback</a></li>
+            <li><a href="/donate">Donate or Volunteer</a></li>
+          </ul>
+        </div>
+        <div class="module">
+          <h3 class="heading">Customize</h3>
+          <ul>
+            <li><a href="/skins">Default</a></li>
+            <li><a href="/skins">Low Vision Default</a></li>
+            <li><a href="/skins">Reversi</a></li>
+            <li><a href="/skins">Snow Blue</a></li>
+          </ul>
+        </div>
+        <div class="module">
+          <h3 class="heading">Development</h3>
+          <ul>
+            <li><a href="/known_issues">Known Issues</a></li>
+          </ul>
+        </div>
+      </footer>
+    </div>
+    <div id="footer">footer</div>
+  </body>
+</html>

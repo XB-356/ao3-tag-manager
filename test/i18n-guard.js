@@ -106,6 +106,37 @@ skinNames.forEach((text) => {
 /** 但"自定义外观"这种界面文案照翻 */
 check('界面文案照翻：Customize', i18n.translate('Customize') === '自定义外观', i18n.translate('Customize'));
 
+/** 前缀命中的边界：译文长度 ≠ 原文长度，剩余部分必须按原文切
+    （曾导致 "Donate or Volunteer" -> "捐赠或参与志愿或 Volunteer"） */
+const prefixBoundary = [
+  ['Donate or Volunteer', '捐赠或参与志愿'],
+  ['Donate or Votunteer', 'Donate or Votunteer'],
+  ['Work Search', '作品搜索'],
+  ['By Choice, by Fate, or Neither', 'By Choice, by Fate, or Neither'],
+  ['Now or Never', 'Now or Never'],
+  ['Terms of Service', '服务条款']
+];
+prefixBoundary.forEach(([text, want]) => {
+  const out = i18n.translate(text);
+  check('前缀命中不得切错尾巴：' + JSON.stringify(text), out === want, out);
+});
+
+/** 评论表单里的界面文案必须翻（曾被 .comment-form 整块跳过，导致评论区永远英文） */
+const commentUi = [
+  ['Post Comment', '发表评论'],
+  ['Comment as', '评论身份'],
+  ['Plain text with limited HTML', '纯文本，支持有限的 HTML'],
+  [
+    'This work\'s creator has chosen to moderate comments on the work. Your comment will not appear until it has been approved by the creator.',
+    '这篇作品的作者开启了评论审核。你的评论要等作者通过后才会显示。'
+  ],
+  ['Brevity is the soul of wit, but we need your comment to have text in it.', '简洁是智慧的灵魂，但评论总得有内容才行。']
+];
+commentUi.forEach(([text, want]) => {
+  const out = i18n.translate(text);
+  check('评论表单界面文案要翻：' + JSON.stringify(text.slice(0, 40)), out === want, out);
+});
+
 console.log('\n===== 结果 =====');
 console.log(results.length - failed + '/' + results.length + ' 通过');
 process.exit(failed ? 1 : 0);
