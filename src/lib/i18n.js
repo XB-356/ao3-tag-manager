@@ -226,6 +226,17 @@
     'Name': '名称',
     'Start typing for suggestions!': '开始输入以获得建议！',
     'Start typing for suggestions': '开始输入以获得建议',
+    // —— 各页页头引导语（官方 locale 的 about / notes_html 段，带链接，按实例收词）——
+    'These are some random tags used on the Archive. To find more tags,': '这些是 AO3 上随机选取的一些标签。想找更多标签，',
+    'try our tag search.': '试试标签搜索。',
+    'These are some of the most popular tags used on the Archive. To find more tags,': '这些是 AO3 上最常用的一些标签。想找更多标签，',
+    'These are some of the most popular tags used in the collection.': '这些是该合集里最常用的一些标签。',
+    'These are some random tags used in the collection.': '这些是该合集里随机选取的一些标签。',
+    'These are some of the latest works posted to the Archive. To find more works,': '这些是 AO3 上最近发布的一些作品。想找更多作品，',
+    'Is it later already?': '已经是稍后了吗？',
+    'Some works you\'ve marked for later.': '你标记为稍后阅读的一些作品。',
+    'Search and Browse FAQ': '搜索与浏览常见问题',
+    'You can have one icon for each pseud.': '每个笔名可以设置一个头像。',
     // —— 修掉"片段替换"残留（整短语收词条，避免半英半中）——
     'AO3 Terms of Service': 'AO3 服务条款',
     'Delete External Work': '删除站外作品',
