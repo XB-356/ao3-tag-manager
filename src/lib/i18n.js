@@ -132,8 +132,9 @@
     'our FAQs': '常见问题',
     'If you experience harassment or have questions about our': '如果你遭遇骚扰，或对',
     'Terms of Service (including the': '服务条款（包括',
-    // Kudos 左上角 ", and <a>user</a>" 里那个 and；换成中文顿号最自然
-    'and': '、',
+    // 连接词 and 只作整段匹配，译文用「与」；
+    // 不要用顿号：说明性文字（"character, and additional tags"）会被破坏
+    'and': '与',
     'Content Policy and Privacy Policy': '内容政策与隐私政策',
     'contact our Policy & Abuse team': '请联系我们的政策与滥用处理团队',
     'publish a new work': '发布新作品',
@@ -421,10 +422,28 @@
     'Enable comment moderation': '开启评论审核',
     'Comment moderation': '评论审核',
     // —— 作品页 / 评论表单（来自真实页面，官方 locale 里多为插值模板）——
-    // Kudos 那行是「用户名链接 + 文本片段」拼的，按真实节点边界收录：
-    //   …, and <a>user</a> as well as 3 guests left kudos on this work!
-    'as well as 3 guests left kudos on this work!': '，以及 3 位访客给这篇作品留下了 Kudos！',
+    // 注意：kudos 那行由 PATTERNS 的模式统一处理（数字是变量），
+    // 这里**不要**再放固定数字的整段 key，否则会和模式叠加出重复文案。
     ', and ': '、',
+    // —— 发布作品页（来自真实快照 New Work）——
+    'Tags are comma separated, 150 characters per tag. Fandom, relationship, character, and additional tags must not add up to more than 75. Archive warning, category, and rating tags do not count toward this limit.': '标签用英文逗号分隔，每个标签最多 150 字符。同人圈、配对、角色与附加标签合计不得超过 75 个；站内警告、类别与分级标签不计入此上限。',
+    'This work is part of a series': '这篇作品属于某个系列',
+    'This work has multiple chapters': '这篇作品有多章',
+    'Please select': '请选择',
+    'Please select a language': '请选择语言',
+    'Work Text': '作品正文',
+    'Work Text*': '作品正文*',
+    'Note:': '注意：',
+    'Text entered in the posting form is': '发布表单里填写的内容',
+    'automatically saved. Always keep a backup copy of your work.': '不会自动保存。请务必自行保留作品备份。',
+    'not': '不会',
+    'Rich Text': '富文本',
+    'HTML': 'HTML',
+    'Preview': '预览',
+    'Chapter 1 of': '第 1 章，共',
+    'Or create and use a new one:': '或新建并使用一个：',
+    'Uncategorized Constructed Languages': '未分类的人造语言',
+    'Undertale Work Skin': 'Undertale 作品皮肤',
     'Post Comment': '发表评论',
     'Plain text with limited HTML': '纯文本，支持有限的 HTML',
     'Brevity is the soul of wit, but we need your comment to have text in it.': '简洁是智慧的灵魂，但评论总得有内容才行。',
@@ -571,6 +590,7 @@
     'Related Works': '相关作品',
     'Publish': '发布',
     'Publish New': '发布新作品',
+    'Post New': '发布新作品',
     'Subscribe': '订阅',
     'Unsubscribe': '取消订阅',
     'Invitations': '邀请',
@@ -785,13 +805,15 @@
     [/\bComments?\s*\((\d[\d,]*)\)/g, '评论（$1）'],
     [/\bHits?\s*\((\d[\d,]*)\)/gi, '点击（$1）'],
     [/\bKudos\s*\((\d[\d,]*)\)/gi, 'Kudos（$1）'],
-    // Kudos 那行：", and " 是用户名之间的分隔，直接换成中文顿号
-    [/\s*,\s+and\s+/g, '、'],
-    // "…as well as 3 guests left kudos on this work!"（数字是变量）
+    // Kudos 那行：", and " 是用户名之间的分隔，直接换成中文顿号。
+    // 前面用 \s? 而不是 \s*：\s* 会吞掉上一个节点的尾空格，
+    // 替换后会出现 "XB356, 、Mishalito" 这种多余逗号。
+    [/\s?,\s+and\s+/g, '、'],
+    // "as well as 3 guests left kudos on this work!"（数字是变量）
+    // 只保留这条整体模式：不能再单独加 "left kudos on this work!"，
+    // 否则两条规则叠加会出现 "…留下了 Kudos！... Kudos on this work!" 的重复（踩过坑）。
     [/\bas well as\s+(\d[\d,]*)\s+guests?\s+left\s+kudos\s+on\s+this\s+work!/gi, '以及 $1 位访客给这篇作品留下了 Kudos！'],
     [/\bas well as\s+(\d[\d,]*)\s+guests?\s+left\s+kudos/gi, '以及 $1 位访客留下了 Kudos'],
-    [/\bleft\s+kudos\s+on\s+this\s+work!/gi, '给这篇作品留下了 Kudos！'],
-    [/\bleft\s+kudos\b/gi, '留下了 Kudos'],
     // 中文语境下不需要空格，顺手收一下
     [/\s+([，。、：（）])/g, '$1'],
     [/([（])\s+/g, '$1']
@@ -1142,6 +1164,11 @@
       .replace(/\.\s*。/g, '。')
       .replace(/([\u4e00-\u9fa5])\s*\.(\s|$)/g, '$1。$2')
       .replace(/([\u4e00-\u9fa5])\s*,\s*/g, '$1，')
+      // kudos 用户名之间的分隔：半角逗号 + 连接词（、或 与）→ 顿号
+      .replace(/\s*,\s*[、与]\s*/g, '、')
+      .replace(/\s+(?=[、，。：；！？])/g, '')
+      // 中文顿号后又出现空格、且后面跟的是西文（用户名等）：去掉这个空格
+      .replace(/([、，。：；！？])\s+(?=[A-Za-z0-9@])/g, '$1')
       .replace(/\s{2,}/g, ' ')
       .trim();
   }
@@ -1214,9 +1241,14 @@
     }
     if (!next || next === trimmed) return false;
 
+    // 统一出口再收一次标点：不同分支（整段命中 / 分段 / 内嵌）都会走到这里，
+    // 避免"逗号紧挨顿号"这类混用漏掉。
+    next = tidyPunctuation(next);
+
     const leading = original.match(/^\s*/)[0];
     const trailing = original.match(/\s*$/)[0];
-    const value = leading + next + trailing;
+    // 译文以中文收尾时，后面的西文空格要去掉
+    const value = leading + next + (/[\u4e00-\u9fa5]\s*$/.test(next) ? trailing.replace(/^\s+/, '') : trailing);
     const el = node.parentElement;
 
     // 只记录"这一个文本节点"已翻译。

@@ -166,8 +166,15 @@ class Cdp {
 
   const kudosText = await text('#kudos');
   console.log('   kudos 实际文本: ' + kudosText);
-  record('kudos：用户列表 + 访客 Kudos 整句已翻', /以及 3 位访客给这篇作品留下了 Kudos！/.test(kudosText), kudosText);
+  record('kudos：访客 Kudos 整句已翻', /以及 3 位访客给这篇作品留下了 Kudos！/.test(kudosText), kudosText);
   record('kudos：无残留英文', !/as well as|left kudos/.test(kudosText), kudosText);
+  record('kudos：没有重复文案', (kudosText.match(/Kudos！/g) || []).length <= 1 && !/Kudos on this work/.test(kudosText), kudosText);
+  record('kudos：用户名仍完整保留', /holycowilovebirds/.test(kudosText) && /Mishalito_334/.test(kudosText) && /XB356/.test(kudosText), kudosText);
+
+  const profileActions = await text('#profile_actions');
+  console.log('   资料页按钮: ' + profileActions);
+  record('资料页：Post New 完整翻译', /发布新作品/.test(profileActions) && !/\bNew\b/.test(profileActions), profileActions);
+  record('资料页：编辑作品 / 订阅 / 邀请已翻', /编辑作品/.test(profileActions) && /订阅/.test(profileActions) && /邀请/.test(profileActions), profileActions);
 
   const footerText = await text('#footer');
   console.log('   页脚实际文本: ' + footerText);

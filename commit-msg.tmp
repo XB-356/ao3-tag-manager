@@ -1,29 +1,21 @@
-feat(i18n): 支持按钮 value / 订阅 / kudos 列表 / 发布作品表单 / 资料页（1.2.3.7）
+fix(i18n): kudos 重复文案 + 发布作品页字段 + 连接词 and 回退（1.2.3.8）
 
-用户报的五处 + 发布作品页 + 资料页，一起补。
+1. kudos 行重复（用户截图："…留下了 Kudos！... Kudos on this work!"）
+   根因：整段 key 与兼容模式同时命中，两条叠加。
+   现在只保留整体模式（数字用捕获组），删掉多余的固定 key 与单条模式。
 
-根因 1：按钮文字是 input 的 value，之前完全没翻
-  <input type="submit" value="Search"> / value="Comment"
-  → 新增 value 属性翻译，但只对 submit/button/reset 白名单生效，
-    文本输入框的 value 是用户内容，绝不触碰
+2. 发布作品页很多没翻（用户快照）
+   补：这篇作品属于某个系列 / 这篇作品有多章 / 请选择语言 / 作品正文 /
+       注意： / 富文本 / HTML / 预览 / 第 1 章，共 / 或新建并使用一个： /
+       未分类的人造语言 / Undertale 作品皮肤，
+       以及标签填写说明整句（150 字符、75 个上限、不计入项）
 
-根因 2：订阅按钮文字来自属性，且由 JS 生成
-  <form data-create-value="Subscribe" data-destroy-value="Unsubscribe">
-  → 翻译 data-create-value / data-destroy-value，并加入属性扫描选择器
+3. 连接词 and 之前被我改成顿号，破坏了说明性文字
+   （"character, and additional tags" → "character、additional tags"）。
+   改回"与"，kudos 用户名的顿号改由标点清理规则处理。
 
-其余补齐：
-- ↑ Top → ↑ 回到顶部
-- kudos 行："as well as 3 guests left kudos on this work!" 数字是变量
-  → 加模式匹配（单复数都覆盖）；", and " 分隔符 → 顿号
-- .kudos 从 KEEP_USER_CONTENT 移除：#kudos 里只有用户名链接和站点文案，
-  没有用户撰写内容（此前整块被跳过，kudos 那行永远是英文）
-- 发布作品页：改为从已有链接导入？/ 必填信息 / 作品标题 / 分级 / 站内警告 /
-  同人圈 / 配对 / 角色 / 附加标签 / 摘要 / 注释 / 末批注 / 开头 / 结尾 /
-  赠送给 / 一般向 / 多元 / 其他 / 链接，以及标签填写说明与两条警告
-- 资料页：我的笔名：/ 注册于：/ 我的用户 ID：/ 管理我的笔名 / 删除我的账号
-  （来自真实快照）
+4. 标点清理统一到译文出口：不同分支（整段/分段/内嵌）都走一遍，
+   避免"逗号紧挨顿号"这类混用漏掉。
+   注：kudos 用户名的分隔处仍会保留一个空格（次要排版瑕疵，不影响阅读）。
 
-测试：
-- test/i18n-comment.js 扩到 18 项：新增 input value 翻译、
-  文本输入框 value 不被改动、↑ Top、kudos 整句
-- 全部套件：71/25/50/19/17/15/9 + comment 18/18
+测试：全部套件通过 —— 71/25/50/19/17/15/9 + comment 22/22
