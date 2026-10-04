@@ -214,6 +214,14 @@
       return true;
     }
 
+    // 排查用：开关汉化的调试缓冲，并读回最近处理过的文本节点
+    if (message.i18nDebug) {
+      root.AO3TM.__i18nDebug = root.AO3TM.__i18nDebug || [];
+      if (message.i18nDebug === 'reset') root.AO3TM.__i18nDebug.length = 0;
+      sendResponse({ log: root.AO3TM.__i18nDebug.slice(-60) });
+      return true;
+    }
+
     if (message.type === 'ao3tm:debug') {
       // 给自动化测试/排查用：先按当前设置应用一次主题与汉化，再返回状态
       const D = root.AO3TM.dom;

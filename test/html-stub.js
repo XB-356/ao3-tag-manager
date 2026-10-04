@@ -174,6 +174,12 @@ function parseHtml(html) {
   const root = new HtmlEl('html', {});
   root.documentElement = root;
   root.body = root;
+  root.createElement = function (tag) {
+    return new HtmlEl(tag, {});
+  };
+  root.createTextNode = function (text) {
+    return { nodeType: 3, nodeValue: String(text), parentElement: null };
+  };
   // 极简 TreeWalker：只实现 i18n 扫描用到的 nextNode()
   root.createTreeWalker = function (start, whatToShow, filter) {
     const nodes = [start].concat(start.descendants);

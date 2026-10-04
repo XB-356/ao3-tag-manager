@@ -94,6 +94,19 @@
     'For help getting started on AO3': '想上手 AO3',
     'check out some useful tips for new users': '可以看看这些给新用户的实用提示',
     'useful tips for new users': '给新用户的实用提示',
+    // AO3 把这些句子用 <a> 链接切成了多个文本节点，
+    // 整句 key 匹配不上任何一个节点，所以必须按"节点边界片段"逐条收录
+    'check out some': '看看这些',
+    '想上手 AO3, check out some': '想上手 AO3，看看这些',
+    'or browse through': '也可以翻翻',
+    'our FAQs': '常见问题',
+    'If you experience harassment or have questions about our': '如果你遭遇骚扰，或对',
+    'Terms of Service (including the': '服务条款（包括',
+    'and': '与',
+    'Content Policy and Privacy Policy': '内容政策与隐私政策',
+    'contact our Policy & Abuse team': '请联系我们的政策与滥用处理团队',
+    'publish a new work': '发布新作品',
+    'publish': '发布',
     'If you need technical support,': '如果你需要技术支持，',
     'contact our Support team': '联系我们的支持团队',
     'About the Archive': '关于本站',
@@ -103,6 +116,9 @@
     'About AO3': '关于 AO3',
     'About the OTW': '关于 OTW',
     'About AO3 and the OTW': '关于 AO3 与 OTW',
+    'Previous Post': '上一篇',
+    'Next Post': '下一篇',
+    'User Research': '用户研究',
     'About Me': '关于我',
     'About Two-Step Verification': '关于两步验证',
     'About the Archive of Our Own': '关于 AO3',
@@ -190,7 +206,6 @@
     'Muting a user will not:': '静音某位用户不会：',
     'Listing Muted Users': '已静音用户列表',
     'Listing Blocked Users': '已屏蔽用户列表',
-    'User': '用户',
     // —— 订阅（来自 subscriptions.*）——
     'List of Subscriptions': '订阅列表',
     'Series Subscriptions': '系列订阅',
@@ -703,6 +718,8 @@
 
   let observer = null;
   let timer = null;
+  /** 已经翻译过的文本节点（用 WeakSet，避免 DOM 标记带来的误判） */
+  const doneNodes = new WeakSet();
   let running = false;
 
   function currentSettings() {
@@ -710,6 +727,12 @@
     return (store && store.get().settings) || {};
   }
 
+  /**
+   * 查词典（子串匹配：key 是 text 的子串也算命中）。
+   * 这样 "Joined: 12 March 2019" 这种挤在一个文本节点里的文案也能翻。
+   * 代价：标题/正文里出现 Characters、Tags 这类词也会被替换，
+   * 所以对"可能是用户内容"的文本必须先用 looksLikeRichText() 拦住。
+   */
   function lookup(text) {
     if (typeof text !== 'string') return null;
     const key = text.replace(/\s+/g, ' ').trim();
@@ -720,6 +743,35 @@
       return k.toLowerCase() === lower;
     })[0];
     return found ? PHRASES[found] : null;
+  }
+
+  /**
+   * 这段文本像不像"用户内容 / 富文本"——那样就不做分段与内嵌替换。
+   * 判据（命中任一即视为不能碰）：
+   *   · 含 URL、或 AO3 的筛选语法（tip: … sort:…）
+   *   · 多于一句（句末标点后还有实词）
+   *   · 偏长（>60 字，多半是标题或正文）
+   * 但"长文本里含已知界面短语"要放行：AO3 的欢迎语、条款提示都是长句，
+   * 不能因为长就把正常翻译也挡掉。
+   */
+  function containsKnownPhrase(text) {
+    if (INLINE_PHRASES === null) inlinePhrases(); // 预热，避免首次调用时未初始化
+    const keys = INLINE_PHRASES || [];
+    for (let i = 0; i < keys.length; i++) {
+      if (text.indexOf(keys[i]) !== -1) return true;
+    }
+    return false;
+  }
+
+  function looksLikeRichText(text) {
+    const value = String(text || '').trim();
+    if (!value) return false;
+    if (/:\/\//.test(value)) return true;
+    if (/\b(tip|sort|words|hits|kudos|language)\s*[:>]/i.test(value)) return true;
+    if (containsKnownPhrase(value)) return false; // 含界面短语，按界面文案处理
+    if (/[.!?]\s+[A-Za-z]/.test(value)) return true;
+    if (value.length > 60) return true;
+    return false;
   }
 
   function applyPatterns(text) {
@@ -735,8 +787,11 @@
     if (!el) return true;
     if (el.closest(SKIP_SELECTOR)) return true;
     if (SKIP_TEXT_TAGS[el.tagName]) return true;
-    if (el.getAttribute && el.getAttribute(ATTR)) {
-      // 已翻过的元素不用再翻，但"悬停显示原文"是后开的开关，需要补标记
+    // 已翻过的文本节点用 WeakSet 记录：
+    // 不要用 DOM 标记判断——早先在父元素上打标记会把同段落里其它文本节点
+    // 一起跳过（表现为"半句中文半句英文"）；插标记 span 又会和别的节点的
+    // previousSibling 撞上，同样误判。
+    if (doneNodes.has(node)) {
       if (bilingual) {
         const orig = el.getAttribute('data-ao3tm-orig');
         if (orig && !el.getAttribute('title')) el.setAttribute('title', orig);
@@ -868,17 +923,24 @@
 
   /**
    * 内嵌短语替换。
-   * 关键细节：HTML 会把源码里的换行与连续空格折叠成一个空格显示，
-   * 而文本节点里可能保留多个空白（含 &nbsp;），所以匹配时要把空白放宽成 \s+，
-   * 否则像"欢迎语第二句"这种跨行书写的句子永远匹配不上。
+   * 关键细节：HTML 会折叠空白，但 DOM 的文本节点里可能保留多个空格/换行/&nbsp;，
+   * 而词典里的 key 是单个空格。早先用"把 key 里的空格换成 \s+ 再拼正则"的做法，
+   * 在多空格文本上仍然匹配不上——改成**两边都先折叠空白再匹配**，更可靠也更简单。
    */
+  const collapseWs = function (text) {
+    return String(text).replace(/[\u3000\u00a0]/g, ' ').replace(/\s{2,}/g, ' ').replace(/\n/g, ' ');
+  };
+
   function translateInlinePhrases(text) {
     if (typeof text !== 'string' || !text) return null;
-    let out = text.replace(/[\u3000\u00a0]/g, ' ');
+    const flat = collapseWs(text);
+    let out = flat;
     let hit = false;
     inlinePhrases().forEach(function (key) {
-      const flexible = escRe(key.replace(/[\u3000\u00a0]/g, ' ')).replace(/ +/g, '\\s+');
-      const re = new RegExp('(^|[^A-Za-z0-9])(' + flexible + ')(?![A-Za-z0-9])', 'g');
+      const flatKey = collapseWs(key);
+      if (out.indexOf(flatKey) === -1) return;
+      // 只在整词边界上替换，避免把 plan/tag 这类子串误翻
+      const re = new RegExp('(^|[^A-Za-z0-9])' + escRe(flatKey) + '(?![A-Za-z0-9])', 'g');
       if (!re.test(out)) return;
       out = out.replace(re, function (all, pre) {
         hit = true;
@@ -901,19 +963,43 @@
       const patterned = applyPatterns(trimmed);
       if (patterned !== trimmed) next = patterned;
     }
-    if (!next) next = translateCompound(trimmed);
-    if (!next) next = translateInlinePhrases(trimmed);
+    // 命中前缀后，把剩下的部分也翻掉。
+    // AO3 常把一个 <p> 的文字和链接连在同一个文本节点里，
+    // 例如 "Hi! … for the first time. For help getting started on AO3, check out some<a>…</a>"，
+    // 整段匹配只能命中前半句，剩下半句如果不管就永远留在英文。
+    if (next && next !== trimmed) {
+      const rest = trimmed.slice(next.length);
+      if (rest && /[A-Za-z]{3}/.test(rest) && !looksLikeRichText(rest)) {
+        const restTranslated = translateCompound(rest) || translateInlinePhrases(rest);
+        if (restTranslated) next = next + restTranslated;
+      }
+    }
+    // 像是用户内容/富文本（标题、公告正文、筛选语法）时，
+    // 只认"整段命中"，不做分段与内嵌替换 ——
+    // 否则标题里的 Characters、Tags 这类词会被替换掉。
+    if (!next && !looksLikeRichText(trimmed)) {
+      next = translateCompound(trimmed);
+    }
+    if (!next && !looksLikeRichText(trimmed)) {
+      next = translateInlinePhrases(trimmed);
+    }
     if (!next || next === trimmed) return false;
 
     const leading = original.match(/^\s*/)[0];
     const trailing = original.match(/\s*$/)[0];
-    node.nodeValue = leading + next + trailing;
-
+    const value = leading + next + trailing;
     const el = node.parentElement;
+
+    // 只记录"这一个文本节点"已翻译。
+    // 一个 <p> 里常有好几个文本节点（被 <a> 链接切开），
+    // 早先给父元素打标记会让同段落里其余节点被整体跳过 —— 表现为"半句中文半句英文"。
+    doneNodes.add(node);
+    node.nodeValue = value;
+
     if (el) {
-      el.setAttribute(ATTR, '1');
-      // 原文始终记下：这样"悬停显示原文"可以随时开关，不需要刷新页面重跑
+      // 原文记在父元素上：用于"悬停显示原文"，也便于排查
       if (!el.getAttribute('data-ao3tm-orig')) el.setAttribute('data-ao3tm-orig', trimmed);
+      el.setAttribute(ATTR, '1');
       if (bilingual) {
         if (!el.getAttribute('title')) el.setAttribute('title', trimmed);
         el.setAttribute('data-ao3tm-bilingual', '1');
