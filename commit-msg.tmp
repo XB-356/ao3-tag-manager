@@ -1,28 +1,30 @@
-feat(i18n): 按官方 locale 全量盘点后补齐剩余用户可见章节（1.2.3.22）
+fix(i18n): 用"结果校验"根治片段替换的半英半中 + 补礼物/任务/合集/搜索表单（1.2.3.23）
 
-用 tools/from-locale.js 对照 otwarchive 官方 en.yml 做了一次全量盘点，
-用户可见章节只剩零散几处，本轮补齐：
+用户报 7 处并建议对照官方仓库排查。新增 tools/audit-partial.js：
+拿官方 en.yml 的 1478 条界面文案逐条跑引擎，找出"会被片段替换破坏"的条目
+——**首次扫描发现 64 处**，例如：
+    Brief summary of 服务条款 violation (required)
+    Delete 外部作品 / 配对 help / My 导入的作品
+    订阅 and Feeds FAQ / 谁可以评论这篇作品?（句子被翻一半）
 
-- 邀请码（invitations）：Copy link / Sent at / Sent to / Sender / Redeemed at /
-  Redeemed by / Invitation token / Invitation Information /
-  List of your invitation tokens… 整句说明
-- 笔名编辑（pseuds.pseuds_form）：Description / Icon / Icon alt text /
-  Icon comment text / change your username / 删除头像说明
-- 合集内容审核（collection_items）：Approved / Rejected by Collection /
-  Rejected by User / Awaiting Collection Approval / Awaiting User Approval /
-  Nothing to review here! / Add Bookmark to collections
-- 挑战报名（challenge.gift_exchange）：Sign-up / CSV Downloads /
-  Download (CSV) / Search by Pseud / No sign-ups yet! /
-  Offers ↓ Requests ↓ Close Offers ↑ Close Requests ↑
-- 站点地图（home.site_map）：Explore / Homepage / Recent Works /
-  Additional Tags Cloud / Collections and Challenges / Access your account /
-  My Home / My Profile / My Series / My Collections and Challenges /
-  Change your account settings / 删号确认句
-- 评论补充：被屏蔽、访客评论关闭、隐藏作品不可评论等 6 句
+根因：片段替换用在"句子级长文本"上。
+修法：不再用长度硬门槛（会连带封掉正常欢迎语），改成**结果校验**——
+translateInlinePhrases 替换后若仍中英夹杂，且原文较长/成词较多，
+判定为句子，直接放弃替换（宁可原样，也不要半英半中）。
+**扫描结果：64 -> 15，其余为正常翻译**（如 Rape/Non-Con: -> 强奸/非自愿:）。
 
-盘点结论：官方 2810 条里剩余 1127 条未收录，**全部集中在**
-管理后台（admin.*）、帮助文档（help.*）、法律条文（home.tos/content/privacy）、
-举报与反馈表单（abuse_reports/feedbacks）——按既定原则不翻译。
+同时补齐用户圈的 7 处：
+- 礼物：Accepted Gifts / Refused Gifts -> 已接收/已拒绝的礼物
+- 任务：Completed Assignments -> 已完成的任务
+- 合集：Date Created -> 创建日期、
+  (Closed, Unmoderated, Unrevealed, Anonymous) -> （已关闭、无需审核、未公开、匿名）
+- 搜索用户：Search all fields -> 搜索所有字段
+- 搜索作品：Work Info / Work Stats / Work Tags / Completion status /
+  All works / Complete works only / Works in progress only /
+  Include·Exclude·Only crossovers / Word Count / Work language
+- 搜索书签：Any field on work / Any field on bookmark / Work tags /
+  Bookmarker's tags / Type / With notes / Date Bookmarked
+- 排序筛选：Sort by / Sort direction / Best Match / Ascending / Descending
+- 另补 20 条被片段替换破坏的整短语（Delete External Work 等）
 
 测试：全部套件通过 —— 71/25/50/19/17/15/9 + 9(the) + 12(homograph) + comment 22/22 + about 5/5
-（run.js 并发跑时偶发 70/71，单跑 71/71）

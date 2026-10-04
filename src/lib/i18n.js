@@ -164,6 +164,74 @@
     'change your username': '修改用户名',
     'Delete your icon and revert to our default. This will also remove your icon alt text and comment text.': '删除头像并恢复默认。这也会一并清除头像的替代文字与注释文字。',
     'This is your icon.': '这是你的头像。',
+    // —— 礼物（Gifts）——
+    'Accepted Gifts': '已接收的礼物',
+    'Refused Gifts': '已拒绝的礼物',
+    'Gifts for': '礼物收件人',
+    // —— 任务（Assignments）——
+    'Completed Assignments': '已完成的任务',
+    'Fulfilled Assignments': '已完成的任务',
+    'Posted Assignments': '已发布的任务',
+    // —— 合集列表与筛选 ——
+    'Date Created': '创建日期',
+    'Date Updated': '更新日期',
+    '(Closed, Unmoderated, Unrevealed, Anonymous)': '（已关闭、无需审核、未公开、匿名）',
+    'Unmoderated': '无需审核',
+    'Unrevealed': '未公开',
+    'Anonymous': '匿名',
+    'Bookmarked Items': '收录的书签',
+    // —— 搜索表单（作品 / 用户 / 书签）——
+    'Search all fields': '搜索所有字段',
+    'Work Info': '作品信息',
+    'Work Stats': '作品统计',
+    'Work Tags': '作品标签',
+    'Completion status': '完成状态',
+    'All works': '全部作品',
+    'Complete works only': '仅完结作品',
+    'Works in progress only': '仅连载中作品',
+    'Crossovers': '跨界联动',
+    'Include crossovers': '包含跨界联动',
+    'Exclude crossovers': '排除跨界联动',
+    'Only crossovers': '仅跨界联动',
+    'Word Count': '字数',
+    'Work language': '作品语言',
+    'Any field on work': '作品任意字段',
+    'Any field on bookmark': '书签任意字段',
+    'Work tags': '作品标签',
+    'Bookmarker\'s tags': '收藏者的标签',
+    'Bookmarker': '收藏者',
+    'Type': '类型',
+    'With notes': '含注释',
+    'Date Bookmarked': '收藏日期',
+    'Rec': '推荐',
+    'Sort by': '排序方式',
+    'Sort direction': '排序方向',
+    'Best Match': '最佳匹配',
+    'Descending': '降序',
+    'Ascending': '升序',
+    'Search people': '搜索用户',
+    'Search bookmarks': '搜索书签',
+    // —— 修掉"片段替换"残留（整短语收词条，避免半英半中）——
+    'AO3 Terms of Service': 'AO3 服务条款',
+    'Delete External Work': '删除站外作品',
+    'Edit External Work': '编辑站外作品',
+    'Hide External Work': '隐藏站外作品',
+    'Make External Work Visible': '让站外作品可见',
+    'Manage Archive FAQs': '管理 AO3 常见问题',
+    'Relationships help': '配对说明',
+    'Relationships Tags': '配对标签',
+    'Relationships, pairings, orientations': '配对、CP、性向',
+    'My Imported Works': '我导入的作品',
+    'Claiming Your Imported Works': '认领你导入的作品',
+    'History and Mark for Later': '浏览历史与稍后阅读',
+    'History and Mark for Later FAQ': '浏览历史与稍后阅读常见问题',
+    'Subscriptions and Feeds FAQ': '订阅与订阅源常见问题',
+    'Collections, Challenges and Gifts Preferences': '合集、挑战与礼物偏好',
+    'Who can comment on this work?': '谁可以评论这篇作品？',
+    'Graphic Depictions Of Violence': '暴力描写',
+    'Graphic Depictions Of Violence:': '暴力描写：',
+    'Some issues you can contact Support about include:': '可以联系支持团队的问题包括：',
+    'Brief summary of Terms of Service violation (required)': '违反服务条款的简要说明（必填）',
     'Visited': '浏览过',
     // —— 浏览历史页 ——
     'Clear Entire History': '清空全部浏览历史',
@@ -357,7 +425,6 @@
     'RSS Feed': 'RSS 订阅',
     'Credits': '鸣谢',
     'Details': '详情',
-    'Sort by': '排序方式',
     'News Post': '新闻帖',
     'Read more': '阅读全文',
     // —— 合集 / 挑战（来自 collections.*）——
@@ -373,7 +440,6 @@
     'Filter collections:': '筛选合集：',
     'Filter by tag': '按标签筛选',
     'Filter by title': '按标题筛选',
-    'Sort direction': '排序方向',
     'Collection Type': '合集类型',
     'Gift Exchange Challenge': '礼物交换挑战',
     'Prompt Meme Challenge': '点梗挑战',
@@ -873,7 +939,6 @@
     'Title': '标题',
     'Title:': '标题：',
     'Sort by:': '排序方式：',
-    'Date Updated': '更新日期',
     'Date Posted': '发布日期',
     'Date': '日期',
     'Published:': '发表于：',
@@ -885,7 +950,6 @@
     'Complete': '完结',
     'Completed: Yes': '完结：是',
     'Completed: No': '完结：否',
-    'Anonymous': '匿名',
     'Mark for Later': '稍后阅读',
     'Marked for Later': '已标记稍后阅读',
     'Download': '下载',
@@ -939,21 +1003,16 @@
     'None': '无',
     'Yes': '是',
     'No': '否',
-    'Best Match': '最佳匹配',
-    'Word Count': '字数',
     'Hits (descending)': '点击数（降序）',
     'Kudos (descending)': 'Kudos（降序）',
     'Comments (descending)': '评论数（降序）',
     'Bookmarks (descending)': '书签数（降序）',
-    'Ascending': '升序',
-    'Descending': '降序',
     'Other tags': '其它标签',
     'Include': '包含',
     'Exclude': '排除',
     'Only': '仅',
     'Any field': '任意字段',
     'Complete Only': '仅完结',
-    'Crossovers': '跨界联动',
     'Single Chapter': '单章',
     'Multi Chapter': '多章',
     'Categories': '类别',
@@ -966,21 +1025,18 @@
     'No Archive Warnings Apply': '无站内警告',
     'Creator Chose Not To Use Archive Warnings': '作者选择不使用站内警告',
     'Major Character Death': '主要角色死亡',
-    'Graphic Depictions Of Violence': '暴力描写',
     'Underage': '未成年性行为',
     'Rape/Non-Con': '强奸/非自愿',
     // —— 书签 / 合集 ——
     'Bookmark Tags': '书签标签',
     'Bookmark Notes': '书签注释',
     'Bookmark Type': '书签类型',
-    'Rec': '推荐',
     'Private': '私密',
     'Public': '公开',
     'Notes:': '注释：',
     'External Work': '外部作品',
     'Collection': '合集',
     'Bookmarked:': '收藏于：',
-    'Bookmarker': '收藏者',
     // —— 评论 / 互动 ——
     'Comment Thread': '评论串',
     'Reply': '回复',
@@ -1477,7 +1533,24 @@
       });
     });
     if (!hit) return null;
+    // 结果校验：片段替换后若仍然中英夹杂，说明原文是"句子"而不是界面短语
+    // （例如 "Brief summary of 服务条款 violation (required)"、"配对 help"、
+    //   "订阅 and Feeds FAQ"），这类宁可放弃替换，也不要翻出半英半中。
+    if (looksSentenceLike(flat, out)) return null;
     return tidyPunctuation(out);
+  }
+
+  /** "替换后仍中英夹杂"的文本，是否更像句子（而非界面短语） */
+  function looksSentenceLike(source, result) {
+    if (!/[\u4e00-\u9fa5]/.test(result)) return false;
+    // 结果里是否还有成词的英文（品牌/术语白名单除外）
+    const rest = result.replace(/\b(AO3|OTW|Kudos|RSS|CSV|HTML|PNG|JPEG|GIF|TWC|Fanlore|Jira|URL|FAQ|TOS|DMCA|TIDA)\b/g, ' ');
+    if (!/[A-Za-z]{3,}/.test(rest)) return false;
+    // 原文较长或成词数多 -> 按句子处理（欢迎语这类整句会落到这里，
+    // 但它们的整段 key 早已在 lookup 阶段命中，不会走到这一步）
+    const words = String(source).split(/\s+/).filter(Boolean).length;
+    if (source.length > 24 || words > 4) return true;
+    return false;
   }
 
   /**
