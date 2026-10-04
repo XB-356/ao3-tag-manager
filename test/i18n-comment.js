@@ -115,8 +115,44 @@ class Cdp {
     if (!ok) console.log('   实际: ' + JSON.stringify(detail));
   };
 
-  const formText = await text('#add_comment_placeholder');
-  console.log('   评论表单实际文本: ' + formText);
+  // input 的 value 也要翻（搜索/评论按钮）；↑ Top 是链接文字
+  const valueChecks = await evaluate(`(() => {
+    const out = {};
+    const commentForm = document.querySelector('#add_comment_placeholder form');
+    const sub = commentForm ? commentForm.querySelector('input[type="submit"]') : null;
+    out.submit = sub ? sub.value : null;
+    const searchForm = document.querySelector('form.search');
+    out.searchButton = searchForm ? (searchForm.querySelector('input[type="submit"]') || {}).value : null;
+    const subForm = document.querySelector('#new_subscription');
+    out.createValue = subForm ? subForm.getAttribute('data-create-value') : null;
+    out.destroyValue = subForm ? subForm.getAttribute('data-destroy-value') : null;
+    const top = document.querySelector('#work_actions + ul.actions a');
+    out.topHtml = top ? top.outerHTML : 'NO-TOP-ELEMENT';
+    out.topText = top ? top.textContent.trim() : null;
+    out.textInputValue = (document.querySelector('form.search input[type="text"]') || {}).value;
+    return out;
+  })()`);
+  console.log('   UI 控件: ' + JSON.stringify(valueChecks));
+  record('input[type=submit] 的 value 已翻', valueChecks.submit === '评论', valueChecks.submit);
+  record('搜索按钮 value 已翻', valueChecks.searchButton === '搜索', valueChecks.searchButton);
+  record('订阅按钮 data-create-value 已翻', valueChecks.createValue === '订阅', valueChecks.createValue);
+  record('data-destroy-value 已翻', valueChecks.destroyValue === '取消订阅', valueChecks.destroyValue);
+  record('↑ Top 已翻', valueChecks.topText === '↑ 回到顶部', valueChecks.topText);
+  record('文本输入框的 value 未被改动', valueChecks.textInputValue === '', JSON.stringify(valueChecks.textInputValue));
+
+  const diag = await evaluate(`(() => {
+    const out = {};
+    const top = document.querySelector('#work_actions + ul.actions a');
+    out.topCount = document.querySelectorAll('#work_actions + ul.actions a').length;
+    out.topText = top ? top.textContent.trim() : 'NO';
+    const k = document.querySelector('#kudos');
+    out.kudosText = k ? k.textContent.replace(/\\s+/g, ' ').trim() : 'NO';
+    out.kudosInUserstuff = !!(k && k.closest('.userstuff'));
+    return out;
+  })()`);
+  console.log('   诊断: ' + JSON.stringify(diag));
+
+  const formText = await text('#add_comment_placeholder');  console.log('   评论表单实际文本: ' + formText);
   record('评论表单：Post Comment 已翻', /发表评论/.test(formText), formText);
   record('评论表单：评论审核提示已翻', /这篇作品的作者开启了评论审核/.test(formText), formText);
   record('评论表单：Comment as 已翻', /评论身份/.test(formText), formText);
@@ -127,6 +163,11 @@ class Cdp {
   const userText = await text('#user_comment_box .userstuff');
   console.log('   用户评论实际文本: ' + userText);
   record('用户评论正文一字未改', /USER WRITTEN COMMENT MUST NOT BE TRANSLATED: Characters Haunting the Narrative and Tags/.test(userText), userText);
+
+  const kudosText = await text('#kudos');
+  console.log('   kudos 实际文本: ' + kudosText);
+  record('kudos：用户列表 + 访客 Kudos 整句已翻', /以及 3 位访客给这篇作品留下了 Kudos！/.test(kudosText), kudosText);
+  record('kudos：无残留英文', !/as well as|left kudos/.test(kudosText), kudosText);
 
   const footerText = await text('#footer');
   console.log('   页脚实际文本: ' + footerText);

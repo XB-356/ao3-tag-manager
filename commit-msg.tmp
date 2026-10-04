@@ -1,30 +1,29 @@
-fix(i18n): 真正修好评论区（元凶是外层 .comment），并补评论表单文案（1.2.3.6）
+feat(i18n): 支持按钮 value / 订阅 / kudos 列表 / 发布作品表单 / 资料页（1.2.3.7）
 
-用户第 N 次反馈："还是没有翻译评论区"——这次拿到刷新后的快照，找到了真元凶。
+用户报的五处 + 发布作品页 + 资料页，一起补。
 
-真因：AO3 把评论表单包在
-    <div class="post comment" id="comment_form_for_243388076">
-      <form class="new_comment" …>
-里，外层 div 带 comment 类，被 KEEP_USER_CONTENT 的 '.comment' 命中而整块跳过。
-于是 Post Comment / Comment as / Plain text with limited HTML / 评论审核提示
-全部一个字都翻不了。
+根因 1：按钮文字是 input 的 value，之前完全没翻
+  <input type="submit" value="Search"> / value="Comment"
+  → 新增 value 属性翻译，但只对 submit/button/reset 白名单生效，
+    文本输入框的 value 是用户内容，绝不触碰
 
-上一版我以为元凶是 '.comment-form'（本地 mock 用的就是那个类），
-结果线上表单的类名是 new_comment，所以"本地测试通过、线上仍然漏翻"。
+根因 2：订阅按钮文字来自属性，且由 JS 生成
+  <form data-create-value="Subscribe" data-destroy-value="Unsubscribe">
+  → 翻译 data-create-value / data-destroy-value，并加入属性扫描选择器
 
-修法：
-- 新增 isCommentForm()：精确识别评论表单区域
-  （#add_comment / #add_comment_placeholder / form.new_comment /
-   div.comment[id^=comment_form]），只放行其中的界面文案
-- shouldSkip / shouldSkipAttr 里对这个区域开例外
-- 用户真正写的评论仍在 '.comment' / '.userstuff' / textarea 保护下，一字不改
-
-顺带：
-- 补 'characters left' -> '剩余字符'、'Enter Comment' -> '输入评论'
-  （原先 'Characters' 把 "10000 characters left" 里的 characters 替换成"角色"）
-- 测试页 mock 改为与线上完全一致的结构（div.post.comment > form.new_comment）
+其余补齐：
+- ↑ Top → ↑ 回到顶部
+- kudos 行："as well as 3 guests left kudos on this work!" 数字是变量
+  → 加模式匹配（单复数都覆盖）；", and " 分隔符 → 顿号
+- .kudos 从 KEEP_USER_CONTENT 移除：#kudos 里只有用户名链接和站点文案，
+  没有用户撰写内容（此前整块被跳过，kudos 那行永远是英文）
+- 发布作品页：改为从已有链接导入？/ 必填信息 / 作品标题 / 分级 / 站内警告 /
+  同人圈 / 配对 / 角色 / 附加标签 / 摘要 / 注释 / 末批注 / 开头 / 结尾 /
+  赠送给 / 一般向 / 多元 / 其他 / 链接，以及标签填写说明与两条警告
+- 资料页：我的笔名：/ 注册于：/ 我的用户 ID：/ 管理我的笔名 / 删除我的账号
+  （来自真实快照）
 
 测试：
-- 新增 test/i18n-comment.js：真实浏览器验证评论区 + 用户评论不被翻译 + 页脚
-  （10/10 通过，含"用户评论正文一字未改"反向断言）
-- 全部套件：71/25/50/19/17/15/9 + comment 10/10
+- test/i18n-comment.js 扩到 18 项：新增 input value 翻译、
+  文本输入框 value 不被改动、↑ Top、kudos 整句
+- 全部套件：71/25/50/19/17/15/9 + comment 18/18

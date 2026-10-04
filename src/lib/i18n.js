@@ -60,10 +60,38 @@
     'Kudos': 'Kudos',
     'Comments': '评论',
     'Comment': '评论',
+    '↑ Top': '↑ 回到顶部',
+    'Top': '回到顶部',
+    'My pseuds:': '我的笔名：',
+    'I joined on:': '注册于：',
+    'My user ID is:': '我的用户 ID：',
+    'Manage My Pseuds': '管理我的笔名',
+    'Delete My Account': '删除我的账号',
     'characters left': '剩余字符',
     'Enter Comment': '输入评论',
-    'Language': '语言',
+    // —— 发布 / 编辑作品表单（来自官方 locale works.work_form_* 与真实页面）——
+    'Import From An Existing URL Instead?': '改为从已有链接导入？',
+    'Required information': '必填信息',
+    '* Required information': '* 必填信息',
+    'Work Title': '作品标题',
+    'Work Title*': '作品标题*',
     'Rating': '分级',
+    'Rating*': '分级*',
+    'Archive Warnings': '站内警告',
+    'Archive Warnings*': '站内警告*',
+    'Fandoms*': '同人圈*',
+    'at the beginning': '开头',
+    'at the end': '结尾',
+    'Gift this work to': '把这篇作品赠送给',
+    'Gen': '一般向',
+    'Multi': '多元',
+    'Other': '其他',
+    'URL': '链接',
+    'Tags are comma separated, 150 characters per tag. Fandom, relationship, character, and additional tags are all added here.': '标签用英文逗号分隔，每个标签最多 150 字符。同人圈、配对、角色和附加标签都填在这里。',
+    'If this is the first work for a fandom, it may not show up in the fandoms page for a day or two.': '如果这是某个同人圈的第一篇作品，它可能需要一两天才会出现在该同人圈页面。',
+    'Warning: Unchecking this box will delete the existing beginning note.': '警告：取消勾选会删除已有的开头批注。',
+    'Warning: Unchecking this box will delete the existing end note.': '警告：取消勾选会删除已有的结尾批注。',
+    'Language': '语言',
     'Warnings': '警告',
     'Relationships': '配对',
     'Characters': '角色',
@@ -104,7 +132,8 @@
     'our FAQs': '常见问题',
     'If you experience harassment or have questions about our': '如果你遭遇骚扰，或对',
     'Terms of Service (including the': '服务条款（包括',
-    'and': '与',
+    // Kudos 左上角 ", and <a>user</a>" 里那个 and；换成中文顿号最自然
+    'and': '、',
     'Content Policy and Privacy Policy': '内容政策与隐私政策',
     'contact our Policy & Abuse team': '请联系我们的政策与滥用处理团队',
     'publish a new work': '发布新作品',
@@ -565,7 +594,6 @@
     'Subscriptions': '订阅',
     'History': '浏览历史',
     'Dashboard': '主页',
-    'Manage My Pseuds': '管理我的笔名',
     'Manage Pseuds': '管理笔名',
     'Edit Preferences': '编辑偏好设置',
     'Manage Subscriptions': '管理订阅',
@@ -671,7 +699,6 @@
     'Multi Chapter': '多章',
     'Categories': '类别',
     'F/M': 'F/M',
-    'Gen': 'Gen',
     'Teen And Up Audiences': '青少年及以上',
     'General Audiences': '全年龄',
     'Mature': '成人',
@@ -758,13 +785,28 @@
     [/\bComments?\s*\((\d[\d,]*)\)/g, '评论（$1）'],
     [/\bHits?\s*\((\d[\d,]*)\)/gi, '点击（$1）'],
     [/\bKudos\s*\((\d[\d,]*)\)/gi, 'Kudos（$1）'],
+    // Kudos 那行：", and " 是用户名之间的分隔，直接换成中文顿号
+    [/\s*,\s+and\s+/g, '、'],
+    // "…as well as 3 guests left kudos on this work!"（数字是变量）
+    [/\bas well as\s+(\d[\d,]*)\s+guests?\s+left\s+kudos\s+on\s+this\s+work!/gi, '以及 $1 位访客给这篇作品留下了 Kudos！'],
+    [/\bas well as\s+(\d[\d,]*)\s+guests?\s+left\s+kudos/gi, '以及 $1 位访客留下了 Kudos'],
+    [/\bleft\s+kudos\s+on\s+this\s+work!/gi, '给这篇作品留下了 Kudos！'],
+    [/\bleft\s+kudos\b/gi, '留下了 Kudos'],
     // 中文语境下不需要空格，顺手收一下
     [/\s+([，。、：（）])/g, '$1'],
     [/([（])\s+/g, '$1']
   ];
 
-  /** 属性翻译（placeholder / title / value） */
+  /**
+   * 属性翻译。
+   * value 只翻"按钮/提交"控件——文本输入框的 value 是用户输入的内容，绝不能动。
+   */
   const ATTRS = ['placeholder', 'title', 'aria-label'];
+  const VALUE_ATTR = 'value';
+  const BUTTON_INPUT_TYPES = { submit: 1, button: 1, reset: 1 };
+
+  /** 动态生成文案所在的属性（AO3 的订阅按钮文字来自 data-create-value） */
+  const DATA_VALUE_ATTRS = ['data-create-value', 'data-destroy-value'];
 
   /** 绝对不翻译的区域：
    *  - 用户内容：正文、摘要、注释、标签、评论
@@ -782,7 +824,9 @@
     // 评论表单里除了用户输入（textarea 已单独跳过）还有大量界面文案：
     // Post Comment / Comment as / Plain text with limited HTML / 评论审核提示 等，
     // 一旦整块跳过，评论区就永远是英文（踩过这个坑）。
-    '.kudos',
+    // 同理 **.kudos 也不能跳过**：#kudos 里只有用户名链接和
+    // "as well as N guests left kudos on this work!" 这类站点文案，
+    // 没有用户撰写的内容（要保护的是 .userstuff / blockquote / textarea）。
     // 个人资料页的简介正文：AO3 用的是 .bio .userstuff，
     // 注意不能把整个 .userstuff 一刀切，否则资料页的界面元素也全被跳过
     '.bio .userstuff',
@@ -1196,17 +1240,32 @@
   function translateAttributes(el, bilingual) {
     if (!el.attributes) return false;
     let changed = false;
-    ATTRS.forEach(function (name) {
+    const translateAttrValue = function (name) {
       const value = el.getAttribute(name);
       if (!value) return;
       const trimmed = value.trim();
-      const exact = lookup(trimmed);
-      const next = exact;
+      const next = lookup(trimmed);
       if (!next || next === trimmed) return;
       el.setAttribute(name, next);
-      if (bilingual) el.setAttribute('data-ao3tm-bilingual', '1');
       changed = true;
-    });
+    };
+
+    ATTRS.forEach(translateAttrValue);
+
+    // 搜索框/评论框那种 <input type="submit" value="Search">：
+    // value 是界面上看得见的按钮文字，必须翻；
+    // 但文本输入框的 value 是用户内容，绝不能动，所以按 type 白名单。
+    const tag = el.tagName;
+    if (tag === 'INPUT' && BUTTON_INPUT_TYPES[String(el.getAttribute('type') || 'text').toLowerCase()]) {
+      translateAttrValue(VALUE_ATTR);
+    } else if (tag === 'BUTTON') {
+      translateAttrValue(VALUE_ATTR);
+    }
+
+    // AO3 的订阅按钮文字由 JS 从 data-create-value 生成，也一并翻掉
+    DATA_VALUE_ATTRS.forEach(translateAttrValue);
+
+    if (changed && bilingual) el.setAttribute('data-ao3tm-bilingual', '1');
     return changed;
   }
 
@@ -1230,7 +1289,9 @@
     });
 
     // 界面属性（搜索框 placeholder、aria-label 等），不碰站点自己的 title tooltip
-    const attrTargets = document.querySelectorAll('[placeholder], [aria-label]');
+    const attrTargets = document.querySelectorAll(
+      '[placeholder], [aria-label], [data-create-value], [data-destroy-value], input[type="submit"], input[type="button"], input[type="reset"]'
+    );
     Array.prototype.forEach.call(attrTargets, function (el) {
       if (shouldSkipAttr(el)) return;
       if (translateAttributes(el, bilingual)) changed += 1;

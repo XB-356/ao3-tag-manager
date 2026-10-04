@@ -8,6 +8,20 @@
   <body>
     <div id="header"><strong>Archive of Our Own</strong></div>
     <div id="main" role="main">
+      <!-- 顶部操作条：↑ Top 是链接文字；Search/Comment 是 input 的 value；订阅文字来自 data-create-value -->
+      <h3 class="landmark heading" id="work_actions">Actions</h3>
+      <ul class="actions">
+        <li><a href="#main">↑ Top</a></li>
+        <li><a href="/works/1/chapters/2">Next Chapter →</a></li>
+      </ul>
+      <form class="search" role="search" aria-label="Work Search">
+        <input type="text" name="work_search[query]" />
+        <input type="submit" value="Search" class="button" />
+      </form>
+      <form class="ajax-create-destroy" id="new_subscription" data-create-value="Subscribe" data-destroy-value="Unsubscribe" action="/subscriptions">
+        <button type="submit">Subscribe</button>
+      </form>
+
       <!-- 评论表单：结构与真实 AO3 完全一致。
            关键：外层是 <div class="post comment" id="comment_form_for_*">，
            会被 KEEP_USER_CONTENT 的 '.comment' 命中（这正是线上漏翻的原因）。 -->
@@ -26,7 +40,7 @@
                   <span role="alert" class="LV_validation_message LV_invalid">Brevity is the soul of wit, but we need your comment to have text in it.</span>
                 </p>
                 <p class="character_counter"><span class="value" data-maxlength="10000">10000</span> characters left</p>
-                <p class="submit actions"><input type="submit" value="Comment" class="button"></p>
+                <p class="submit actions"><input type="submit" value="Comment" class="button" /></p>
               </fieldset>
             </form>
           </div>
@@ -37,6 +51,13 @@
       <div id="user_comment_box" class="post comment" role="article">
         <h4 class="heading"><a href="/users/someone">someone</a></h4>
         <p class="userstuff">USER WRITTEN COMMENT MUST NOT BE TRANSLATED: Characters Haunting the Narrative and Tags</p>
+      </div>
+
+      <!-- Kudos 那一行：用户名链接 + 文本片段 -->
+      <div id="kudos">
+        <p class="kudos">
+          <a href="/users/a">holycowilovebirds</a>, and <a href="/users/b">XB356</a> as well as 3 guests left kudos on this work!
+        </p>
       </div>
 
       <!-- 与真实 AO3 页脚一致的节点结构 -->
