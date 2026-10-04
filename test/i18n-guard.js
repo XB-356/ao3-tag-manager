@@ -29,19 +29,29 @@ const mustNotChange = [
   'The Big Bang, Baby Challenge is Moving to AO3',
   'Updates to "No Fandom" Additional Tags, September 2026',
   'The OTW is Recruiting for Communications, Accessibility, Design, & Technology, User Research',
-  'tip: arthur merlin words>1000 sort:hits',
-  'tip: austen words:10000-50000 sort:标题',
   'Fri, 02 Oct 2026 07:14PM UTC',
   'The Big Bang, Baby Challenge was created in 2005 to incentivize the creation of more canon-based novels.',
   'I write fluffy things and I like tea. Works: 12 is my favourite number.',
   'Harry Potter',
   'No Fandom',
-  'September 2026'
+  'September 2026',
+  'All About Eve',
+  'Lazy Town',
+  'Angels'
 ];
 
 mustNotChange.forEach((text) => {
   const out = i18n.translate(text);
   check('不该替换：' + JSON.stringify(text.slice(0, 46)), out === text, out);
+});
+
+/** 搜索框语法提示：只翻开头标签，示例查询必须原样保留 */
+[
+  ['tip: arthur merlin words>1000 sort:hits', '提示：arthur merlin words>1000 sort:hits'],
+  ['tip: austen words:10000-50000 sort:标题', '提示：austen words:10000-50000 sort:标题']
+].forEach(([text, want]) => {
+  const out = i18n.translate(text);
+  check('tip 只翻标签、查询保留：' + JSON.stringify(text.slice(0, 34)), out === want, out);
 });
 
 /** 这些是真正的界面文案，必须翻译（防止上面的保护把正常翻译也挡掉） */

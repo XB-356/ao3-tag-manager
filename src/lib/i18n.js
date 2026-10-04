@@ -226,6 +226,10 @@
     'Name': '名称',
     'Start typing for suggestions!': '开始输入以获得建议！',
     'Start typing for suggestions': '开始输入以获得建议',
+    // 搜索框下的语法提示标签（官方 locale: works.search_box.tooltip_label = 'tip:'）。
+    // 后面跟的是"示例查询"（如 "arthur merlin words>1000 sort:hits"）——
+    // 那是可照抄的语法，必须保持原样，只翻前面的标签。
+    'tip:': '提示：',
     // —— 各页页头引导语（官方 locale 的 about / notes_html 段，带链接，按实例收词）——
     'These are some random tags used on the Archive. To find more tags,': '这些是 AO3 上随机选取的一些标签。想找更多标签，',
     'try our tag search.': '试试标签搜索。',
@@ -1116,6 +1120,8 @@
     // 历史页那句里的括号版本标记（整段里长度不够，字典查不到，用模式补）
     [/\(Latest version\.\)/gi, '（最新版本）'],
     [/\(Latest version\)/gi, '（最新版本）'],
+    // 搜索框提示：只翻开头的 "tip:" 标签，后面的示例查询原样保留
+    [/^\s*tip:\s*/i, '提示：'],
     // 收件箱标题："My Inbox (2 comments, 1 unread)"（数字是变量）
     [/\bMy Inbox\s*\(\s*(\d[\d,]*)\s*comments?\s*,\s*(\d[\d,]*)\s*unread\s*\)/gi,
       '我的收件箱（$1 条评论，$2 条未读）'],

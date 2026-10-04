@@ -1,30 +1,17 @@
-feat(i18n): 补齐各页页头引导语（1.2.3.26）
+feat(i18n): 翻译搜索框的语法提示标签 tip:（1.2.3.27）
 
-用户报标签页页头语漏翻，并按建议对照官方仓库排查同类。
-从 otwarchive 的 config/locales 里取出全部"页头引导语"段，逐条补齐：
+用户报搜索框下方 "tip: arthur merlin words>1000 sort:hits" 没翻。
 
-标签页（tags.index.about）
-- These are some random tags used on the Archive. To find more tags,
-  -> 这些是 AO3 上随机选取的一些标签。想找更多标签，
-- try our tag search. -> 试试标签搜索。
-- These are some of the most popular tags used on the Archive. To find more tags,
-  -> 这些是 AO3 上最常用的一些标签。想找更多标签，
-- These are some of the most popular tags used in the collection.
-- These are some random tags used in the collection.
+官方 locale 里这其实是一个独立的界面标签：
+    works.search_box.tooltip_label: 'tip:'
+后面的 "arthur merlin words>1000 sort:hits" 是**示例查询语法**，
+是给用户照抄的，必须保持原样（翻成中文反而没法用）。
 
-作品/书签列表页（works.index / bookmarks.index）
-- These are some of the latest works posted to the Archive. To find more works,
-  -> 这些是 AO3 上最近发布的一些作品。想找更多作品，
-- （书签页那条上一轮已补）
+改法：
+- 新增整段词条 'tip:' -> '提示：'
+- 新增模式 /^\s*tip:\s*/i -> '提示：'，让"标签 + 示例"整行也能翻前半段
+  结果是「提示：arthur merlin words>1000 sort:hits」——标签中文、语法可照抄
 
-首页与其它
-- Is it later already? -> 已经是稍后了吗？
-- Some works you've marked for later. -> 你标记为稍后阅读的一些作品。
-- Find your favorites -> 找到你的心头好
-- Search and Browse FAQ -> 搜索与浏览常见问题
-- You can have one icon for each pseud. -> 每个笔名可以设置一个头像。
-
-说明：官方原文里这些句子含 %{...}_link 插值，
-页面上是「文本 + <a>链接 + 文本」的多节点结构，所以按节点边界分别收词。
-
-测试：全部套件通过 —— 71/25/50/19/17/15/9 + 9(the) + 12(homograph) + comment 22/22 + about 5/5
+测试调整：原先 guard 里把整行 tip 当作"不得改动"，
+现改为"只翻标签、查询保留"的专门断言（2 条）。
+全部套件通过 —— 71/25/53/19/17/15/9 + 9(the) + 12(homograph) + comment 22/22 + about 5/5
