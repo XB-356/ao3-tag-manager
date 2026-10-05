@@ -49,7 +49,7 @@ const run = (file) => {
   UNIT.forEach((f) => rows.push(run(f)));
   BROWSER.forEach((f) => {
     killHeadlessChrome();
-    sleepSync(3000); // 等 Chrome 完全退出，否则下一个测试可能连不上调试端口
+    sleepSync(5000); // 等 Chrome 完全退出，否则下一个测试可能连不上调试端口
     rows.push(run(f));
   });
   killHeadlessChrome();

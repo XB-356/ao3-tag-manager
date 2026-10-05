@@ -57,7 +57,11 @@ module.exports = [
   ['Content rating', '内容分级'],
   ['Content warnings', '内容警告'],
   ['Yes, I am at least 13.', '是的，我已满 13 岁。'],
-  ['tip: arthur merlin words>1000 sort:hits', '提示：arthur merlin words>1000 sort:hits']
+  ['tip: arthur merlin words>1000 sort:hits', '提示：arthur merlin words>1000 sort:hits'],
+  // 搜索结果那句话里的排序名是小写回显（与下拉框里的大写形式是两个不同字符串）
+  ['You searched for: buddyfight sort by: date posted descending', '你搜索了：buddyfight 排序：发布日期 降序'],
+  ['You searched for: x sort by: word count ascending', '你搜索了：x 排序：字数 升序'],
+  ['You searched for: y sort by: date updated descending', '你搜索了：y 排序：更新日期 降序']
 ];
 
 /* 作品卡片（blurb）场景：卡片里的"用户数据"不能动，"界面统计"必须翻。

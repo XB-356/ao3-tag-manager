@@ -1307,7 +1307,20 @@
     [/\bsort by:\s*/gi, '排序：'],
     [/\bbest match\b/gi, '最佳匹配'],
     [/\bdescending\b/gi, '降序'],
+
     [/\bascending\b/gi, '升序'],
+    // 搜索结果那句里的排序名是**小写回显**（"sort by: date posted descending"），
+    // 与下拉框里的 "Date Posted" 不是同一个字符串，所以在"排序："之后单独认。
+    // 必须放在 descending / ascending 规则之后，否则方向词还没变成中文就匹配不到。
+    [/(排序[：:])\s*([a-z][a-z ]*[a-z])\s*(?:降序|升序)/g,
+      function (all, head, name) {
+        const dir = /降序/.test(all) ? '降序' : '升序';
+        return head + (SORT_NAMES[name.trim().toLowerCase()] || name) + ' ' + dir;
+      }],
+    [/(排序[：:])\s*([a-z][a-z ]*[a-z])\s*$/g,
+      function (all, head, name) {
+        return head + (SORT_NAMES[name.trim().toLowerCase()] || name);
+      }],
     [/\b(\d[\d,]*)\s+Found\b/g, '找到 $1 条'],
     [/\b(\d[\d,]*)\s+results?\b/gi, '$1 条结果'],
     // 中文句子末尾的英文句号 -> 中文句号（只在前一个字符是汉字时替换，避免动 URL/缩写）
@@ -1443,6 +1456,21 @@
   /** 当前处理的文本节点所属元素：片段替换只允许在界面元素里发生 */
   let textNodeEl = null;
 
+  /** 搜索结果句子里"排序名"的小写回显 -> 中文（下拉框里是大写形式，另有词条） */
+  const SORT_NAMES = {
+    'best match': '最佳匹配',
+    'date posted': '发布日期',
+    'date updated': '更新日期',
+    'date bookmarked': '收藏日期',
+    'word count': '字数',
+    'hits': '点击',
+    'kudos': 'Kudos',
+    'comments': '评论',
+    'bookmarks': '书签',
+    'title': '标题',
+    'creator': '作者',
+    'author': '作者'
+  };
   /** 极短高危词：只允许在表单标签元素里翻译（见 translateTextNode） */
   const UI_ONLY_KEYS = { 'From': 1, 'To': 1, 'by the': 1, 'Home': 1 };
   /** 已经翻译过的文本节点（用 WeakSet，避免 DOM 标记带来的误判） */
