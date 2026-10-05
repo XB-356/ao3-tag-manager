@@ -1,29 +1,16 @@
-fix(i18n): 搜索结果里的排序名没翻（1.2.4.1 alpha）
+release: v1.2.4
 
-用户报搜索结果的排序行显示「排序： date posted 降序」。
+本次修复（相对 v1.2.3）：
+- 搜索结果里的排序名显示为英文小写回显
+  「排序： date posted 降序」-> 「排序：发布日期 降序」
+  下拉框里的大写选项本来就是翻好的，回显的小写形式是另一个字符串，
+  已为 best match / date posted / date updated / date bookmarked /
+  word count / hits / kudos / comments / bookmarks / title / creator
+  补齐映射
 
-排查：下拉框里的选项是**翻好的**（Date Posted -> 发布日期），
-没翻的是那句话里 AO3 回显的**小写形式**——
-"You searched for: buddyfight sort by: date posted descending"
-里的 "date posted" 与下拉框的 "Date Posted" 是两个不同字符串。
+工程改进：
+- coverage 测试从 71 增到 74 条（新增 3 条排序句断言）
+- 全量运行器里浏览器测试之间的等待从 3s 提到 5s，
+  避免 Chrome 退出不及时导致下一个测试 CDP 启动失败
 
-修法：新增 SORT_NAMES 映射（best match / date posted / date updated /
-date bookmarked / word count / hits / kudos / comments / bookmarks /
-title / creator），并加两条模式，**只在"排序："之后生效**：
-
-    /(排序[：:])\s*([a-z][a-z ]*[a-z])\s*(?:降序|升序)/g
-    /(排序[：:])\s*([a-z][a-z ]*[a-z])\s*$/g
-
-两条模式必须放在 descending / ascending 规则**之后**——
-否则方向词还没变成中文，前瞻匹配不到（第一次就踩了这个）。
-
-结果：
-    You searched for: buddyfight sort by: date posted descending
-      -> 你搜索了：buddyfight 排序：发布日期 降序
-    ...sort by: word count ascending
-      -> ...排序：字数 升序
-
-回归：coverage 测试从 71 增到 74，新增 3 条排序句断言。
 测试：node test/all.js -> 16/16 个测试文件通过
-（顺带把运行器里浏览器测试之间的等待从 3s 提到 5s，
-  避免 Chrome 退出不及时导致下一个测试 CDP 启动失败）
