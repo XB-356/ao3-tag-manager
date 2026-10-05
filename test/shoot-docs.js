@@ -98,10 +98,12 @@ class Cdp {
       setTimeout(() => resolve({ timeout: true }), 4000);
     }))()`);
 
-  const shot = async (name) => {
+  const shot = async (name, clip) => {
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        const { data } = await send('Page.captureScreenshot', { format: 'png' });
+        const params = { format: 'png' };
+        if (clip) params.clip = Object.assign({ scale: 1 }, clip);
+        const { data } = await send('Page.captureScreenshot', params);
         fs.writeFileSync(path.join(OUT, name + '.png'), Buffer.from(data, 'base64'));
         console.log('docs/images/' + name + '.png');
         return;
@@ -198,6 +200,31 @@ class Cdp {
   await waitFor(`!!document.documentElement && document.documentElement.getAttribute('data-ao3tm-ready') === '1'`, '汉化页就绪');
   await sleep(900);
   await shot('i18n');
+
+  /* 6. 汉化总览：完整模拟 AO3 列表页（侧栏 + 筛选 + 作品列表） */
+  await send('Page.navigate', { url: 'http://127.0.0.1:' + PORT + '/demo-ao3.html' });
+  await waitFor(`!!document.documentElement && document.documentElement.getAttribute('data-ao3tm-ready') === '1'`, '演示页就绪');
+  await command('ao3tm:refresh');
+  await sleep(1400);
+  await evaluate(`(() => { const t = document.getElementById('ao3tm-toast'); if (t) t.classList.remove('ao3tm-toast-show'); return true; })()`);
+  await sleep(200);
+  await shot('i18n-overview');
+
+  /* 7. 汉化：个人主页欢迎横幅（整句被链接切碎） */
+  await send('Page.navigate', { url: 'http://127.0.0.1:' + PORT + '/profile-banner.html' });
+  await waitFor(`!!document.documentElement && document.documentElement.getAttribute('data-ao3tm-ready') === '1'`, '个人主页就绪');
+  await command('ao3tm:refresh');
+  await sleep(1200);
+  await shot('i18n-profile', { x: 0, y: 0, width: 1100, height: 460 });
+
+  /* 8. 汉化：媒体页面包屑（同人圈 > 分类名） */
+  await send('Page.navigate', { url: 'http://127.0.0.1:' + PORT + '/media.html' });
+  await waitFor(`!!document.documentElement && document.documentElement.getAttribute('data-ao3tm-ready') === '1'`, '媒体页就绪');
+  await command('ao3tm:refresh');
+  await sleep(1000);
+  const mediaClip = await evaluate("(() => { const h = document.querySelector('#main h2.heading').getBoundingClientRect(); const p = document.querySelector('#main p.notes').getBoundingClientRect(); return { x: 0, y: 0, width: Math.ceil(Math.max(h.right, p.right)) + 40, height: Math.ceil(p.bottom) + 40 }; })()");
+  await shot('i18n-media', mediaClip);
+
   // 复原设置，避免影响手动试用的默认值
   await command('ao3tm:debug', {});
   await evaluate(`new Promise(r => r())`);

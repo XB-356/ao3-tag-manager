@@ -482,7 +482,7 @@ class Cdp {
   const filePage = path.join(os.tmpdir(), 'ao3tm-local-test.html');
   fs.copyFileSync(path.resolve(__dirname, 'mock', 'list.html'), filePage);
   await send('Page.navigate', { url: 'file:///' + filePage.replace(/\\/g, '/') });
-  await waitFor(`!!document.documentElement.getAttribute('data-ao3tm-ready')`, 'file:// 页面扩展已注入', 15000);
+  await waitFor(`!!document.documentElement.getAttribute('data-ao3tm-ready')`, 'file:// 页面扩展已注入', 45000); // 全量连跑时 file:// 注入会偏慢，给足时间
   // total 来自 ui.lastStats，ready 标记挂在更外层，先主动 refresh 一次再读
   await command('ao3tm:refresh');
   await sleep(800);

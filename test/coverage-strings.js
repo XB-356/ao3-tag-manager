@@ -59,6 +59,25 @@ module.exports = [
   ['Yes, I am at least 13.', '是的，我已满 13 岁。'],
   ['tip: arthur merlin words>1000 sort:hits', '提示：arthur merlin words>1000 sort:hits']
 ];
+
+/* 作品卡片（blurb）场景：卡片里的"用户数据"不能动，"界面统计"必须翻。
+   背景：早先为保护用户数据把整个 li.blurb 跳过，结果连统计和操作按钮也一起挡了。 */
+module.exports.BLURB = {
+  mustNotChange: {
+    title: 'All About Eve',
+    fandom: 'Lazy Town',
+    tag0: 'Top Park Jongseong | Jay',
+    summary: 'The quick brown fox jumps over the lazy dog. Works: 12 is my favourite number.'
+  },
+  mustTranslate: [
+    ['Language:', '语言：'],
+    ['Words:', '字数：'],
+    ['Chapters:', '章节：'],
+    ['Comments:', '评论：'],
+    ['Kudos:', 'Kudos：'],
+    ['Hits:', '点击：']
+  ]
+};
 /* 用户数据样本：渲染在同页的"用户内容"区域，**一个字都不能改**。
    这些是历史上被片段替换/PATTERNS 改坏过的真实形态。 */
 module.exports.MUST_NOT_CHANGE = [

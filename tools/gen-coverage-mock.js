@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const items = require(path.join(__dirname, '..', 'test', 'coverage-strings.js'));
 const userData = items.MUST_NOT_CHANGE || [];
+const blurb = items.BLURB;
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -53,6 +54,18 @@ const html = [
   '      <blockquote class="userstuff"><p><span data-uidx="' + (userData.indexOf('I write fluffy things and I like tea. Works: 12 is my favourite number.')) + '">' + esc('I write fluffy things and I like tea. Works: 12 is my favourite number.') + '</span></p></blockquote>',
   '      <!-- 用户数据：搜索框语法提示 -->',
   '      <p class="notes"><span data-uidx="' + (userData.indexOf('tip: arthur merlin words>1000 sort:hits')) + '">' + esc('tip: arthur merlin words>1000 sort:hits') + '</span></p>',
+  '      <!-- 作品卡片：用户数据（不能动）+ 界面统计（要翻） -->',
+  '      <ol class="work index group">',
+  '        <li class="work blurb group">',
+  '          <h4 class="heading"><a href="#"><span data-bidx="title">' + esc(blurb.mustNotChange.title) + '</span></a></h4>',
+  '          <div class="fandom"><span data-bidx="fandom">' + esc(blurb.mustNotChange.fandom) + '</span></div>',
+  '          <ul class="tags"><li><a href="#"><span data-bidx="tag0">' + esc(blurb.mustNotChange.tag0) + '</span></a></li></ul>',
+  '          <blockquote class="summary"><span data-bidx="summary">' + esc(blurb.mustNotChange.summary) + '</span></blockquote>',
+  blurb.mustTranslate
+    .map((p, i) => '          <dl class="stats"><dt><span data-sidx="' + i + '">' + esc(p[0]) + '</span></dt><dd>' + esc(String(100 + i)) + '</dd></dl>')
+    .join('\n'),
+  '        </li>',
+  '      </ol>',
   '    </div>',
   '    <div id="footer"><ul><li><a href="#">Known Issues</a></li></ul></div>',
   '  </body>',

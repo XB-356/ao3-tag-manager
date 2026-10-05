@@ -151,6 +151,31 @@ class Cdp {
     });
     return out;
   })()`);
+  // 作品卡片：用户数据不能动 + 统计要翻
+  if (items.BLURB) {
+    const b = items.BLURB;
+    const gotBlurb = await evaluate(`(() => {
+      const out = {};
+      const el = document.querySelector('li.blurb [data-bidx="' + 'title' + '"]');
+      return out;
+    })()`);
+    const blurbRaw = await evaluate(`(() => {
+      const out = {};
+      document.querySelectorAll('li.blurb [data-bidx]').forEach(function (el) {
+        out[el.getAttribute('data-bidx')] = el.textContent.replace(/\\s+/g, ' ').trim();
+      });
+      document.querySelectorAll('li.blurb [data-sidx]').forEach(function (el) {
+        out['stat' + el.getAttribute('data-sidx')] = el.textContent.replace(/\\s+/g, ' ').trim();
+      });
+      return out;
+    })()`);
+    Object.keys(b.mustNotChange).forEach(function (k) {
+      record('卡片用户数据未改动：' + JSON.stringify(b.mustNotChange[k].slice(0, 40)), blurbRaw[k] === b.mustNotChange[k], { got: blurbRaw[k], want: b.mustNotChange[k] });
+    });
+    b.mustTranslate.forEach(function (pair, i) {
+      record('卡片统计已翻译：' + JSON.stringify(pair[0]), blurbRaw['stat' + i] === pair[1], { got: blurbRaw['stat' + i], want: pair[1] });
+    });
+  }
   userData.forEach(function (src, idx) {
     record('用户数据未被改动：' + JSON.stringify(src.slice(0, 46)), actualData[idx] === src, { got: actualData[idx], want: src });
   });

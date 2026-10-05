@@ -12,6 +12,15 @@
 | --- | --- | --- |
 | ![设置面板](docs/images/panel.png) | ![深色模式](docs/images/dark-mode.png) | ![界面汉化](docs/images/i18n.png) |
 
+界面汉化效果（覆盖列表页 / 作品页 / 个人主页 / 设置页等界面文案，
+**作品标题、标签、简介等用户内容一律保持原文**）：
+
+![汉化总览：完整列表页](docs/images/i18n-overview.png)
+
+| 个人主页（整句被链接切碎也照样翻） | 媒体页（面包屑「同人圈 > 戏剧」） |
+| --- | --- |
+| ![汉化：个人主页](docs/images/i18n-profile.png) | ![汉化：媒体页](docs/images/i18n-media.png) |
+
 镜像站自动检测（在陌生域名上判定并给出一键启用）：
 
 ![镜像站自动检测横幅](docs/images/detect-banner.png)

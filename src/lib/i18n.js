@@ -1269,6 +1269,8 @@
     'Comma separated, 150 characters per tag': '用逗号分隔，每个标签最多 150 个字符',
     'For a work in the Archive, only the URL is required.': '如果作品已在本站，只需填写网址。',
     'Choose one of your existing series:': '选择一个已有的系列：',
+    'Home': '主页',
+    'Challenges': '挑战',
     'Error': '出错了',
     'Success': '成功'
   };
@@ -1385,11 +1387,16 @@
     'ul.tag',
     '.tag.index',
     'ul.work.index',
-    '.work.blurb',
-    'li.blurb',
-    '.bookmark.blurb',
-    '.series.blurb',
-    '.collection.blurb',
+    // 作品卡片：只跳过**用户数据部分**，不要跳过整个 .blurb——
+    // 卡片里还有统计（Language: / Words: / Kudos: / Hits:）和
+    // 操作按钮（隐藏 / 屏蔽），那些是界面文案，必须翻译。
+    '.blurb h4',
+    '.blurb .fandom',
+    '.blurb .tags',
+    'ul.tags',
+    '.blurb .summary',
+    '.blurb .userstuff',
+    '.blurb .notes',
     '.summary.module',
     '.tag.set',
     // 注意：不能按容器 (#main .notes / .summary / .comment) 跳过。
@@ -1437,7 +1444,7 @@
   let textNodeEl = null;
 
   /** 极短高危词：只允许在表单标签元素里翻译（见 translateTextNode） */
-  const UI_ONLY_KEYS = { 'From': 1, 'To': 1, 'by the': 1 };
+  const UI_ONLY_KEYS = { 'From': 1, 'To': 1, 'by the': 1, 'Home': 1 };
   /** 已经翻译过的文本节点（用 WeakSet，避免 DOM 标记带来的误判） */
   const doneNodes = new WeakSet();
   let running = false;
@@ -1862,13 +1869,10 @@
     const trimmed = original.trim();
     if (!trimmed) return false;
 
-    // 极短的高危词（From / To 这类）：只允许在表单标签元素里翻译。
-    // 否则作品名/标签恰好叫 "From" 就会被改成"从"。
+    // 极短的高危词（From / To / Home 这类）：只在**界面区域**里翻译。
+    // 否则作品名/标签恰好叫 "From"、"Home" 就会被改坏。
     if (UI_ONLY_KEYS[trimmed]) {
-      const host = node.parentElement;
-      const tag = host && host.tagName;
-      const inForm = host && host.closest && host.closest('label, dt, dd, form');
-      if (tag !== 'LABEL' && !inForm) return false;
+      if (!inUiRegion(node.parentElement)) return false;
     }
 
     // 特例：AO3 在「关于我们」页把首段的定冠词单独切成了一个文本节点：

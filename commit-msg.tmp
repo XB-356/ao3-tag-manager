@@ -1,32 +1,34 @@
-feat(i18n): 新增"界面区域审计器"并补齐它发现的漏翻（1.2.3.34）
+release: v1.2.3 正式版
 
-按用户委托继续自主排查。
+累积 37 个提交后的首个正式版本。相对上一正式版 v1.2.2 的主要变化：
 
-新增 tools/audit-ui-areas.js：只扫**界面区域**（导航/表单/标题/注记/页脚等），
-避开用户内容噪音。两个关键设计，否则结果全是假的：
-1. 优先用元素的 data-ao3tm-orig（扩展存的**原文**）去对照**当前**词典。
-   直接看快照文本会大量假阳性——页面里已是旧版本翻出来的译文，
-   当前词典当然匹配不上（例如已是"筛选 by read"，而词典里是 "Filter by read"）。
-2. "能翻"要同时算上三条路径（整段 lookup / 分段 compound / 内嵌短语 inline），
-   否则 "Works (0)" 这种会被误报（它靠分段路径翻成"作品 (0)"）。
-另外自动排除语言名、站点皮肤名、作品名、编码名。
+界面汉化（本轮重点）
+- 覆盖列表页 / 作品页 / 个人主页 / 设置页 / 收件箱 / 浏览历史 / 任务 / 领取 /
+  礼物 / 合集 / 统计 / 各搜索表单 / 举报与反馈表单 / 符号说明弹窗 等
+- 按官方仓库 otwarchive 的 config/locales 逐章节对照补齐
+- 三条原则：**界面文案翻；帮助文档正文与法律条文不翻；语言名、站点皮肤名、
+  专有名词不翻**
+- **用户内容一个字不动**：作品标题、标签、作者名、简介、同人圈列表、系列名
+  （历史上出现过 "All About Eve -> 全部 About Eve"、
+  "The 100 Series -> The 100 个系列"、"Top -> 回到顶部" 等误伤，均已修掉）
 
-跑全部 23 个快照后发现 6 处真缺口，已补齐：
-- 'by the' -> 由（页脚 "GPL-2.0-or-later by the OTW"）
-- 'Page Summary' -> 页面摘要
-- 'Help & Info for Users' -> 用户帮助与信息
-- 'where to find us' -> 在哪里找到我们
-- "The creator's summary is added automatically." -> 创作者的摘要会自动添加。
-- "The creator's tags are added automatically." -> 创作者的标签会自动添加。
-- 'Comma separated, 150 characters per tag' -> 用逗号分隔，每个标签最多 150 个字符
-- 'For a work in the Archive, only the URL is required.' -> 如果作品已在本站，只需填写网址。
-- 'Choose one of your existing series:' -> 选择一个已有的系列：
+修掉的几个结构性根因
+- 片段替换只允许在"界面区域"发生（导航/表单/按钮等白名单）
+- PATTERNS 与公共 translate 出口增加"用户数据总闸"
+- 多义词（Top / Last / Or / Home / From / To）只允许整段或界面区内匹配
+- 作品卡片只跳过"用户数据部分"，不再整块跳过——
+  否则统计（语言/字数/章节/Kudos/点击）和操作按钮会一起被挡掉
+- 面包屑分类名、被 <a> 切碎的整句、孤立冠词与句号等结构问题逐个处理
 
-'by the' 太短、有误伤作品名/正文的风险，已加入 UI_ONLY_KEYS
-（只在表单标签等界面元素里翻译）。
+工具与测试
+- 新增 tools/audit-ui-areas.js：只扫界面区域的漏翻审计
+- 新增 tools/audit-partial.js：对照官方 locale 找"会被片段替换破坏"的文案
+- 新增 test/all.js：全量运行器，一次跑完 16 个测试文件
+- 新增 test/i18n-coverage.js：模拟环境覆盖测试，71 条双向断言
+  （界面文案必须翻 + 用户数据必须不变）
+- 新增 test/i18n-homograph.js / i18n-banner.js / i18n-media.js 等回归
 
-审计里剩下的大量条目均为：语言名（af Soomaali / Nāhuatl / tlhIngan-Hol …）、
-站点皮肤名（Reversi / Snow Blue / Fixie Buttons …）、用户标签与作品标题、
-字符编码名（euc-jp-ms / stateless-ISO-2022-JP …）—— 按既定原则不翻译。
+README
+- 重新生成一批效果图，新增"汉化总览 / 个人主页 / 媒体页"三张
 
-测试：node test/all.js -> 16/16 个测试文件通过
+测试：node test/all.js -> 16/16 个测试文件通过（共 300+ 断言）
