@@ -16,7 +16,8 @@ const UNIT = [
 // 真实浏览器测试（每个都要先清掉遗留的 headless Chrome，避免相互干扰）
 const BROWSER = [
   'run.js', 'theme-i18n.js', 'i18n-comment.js', 'i18n-about.js',
-  'i18n-banner.js', 'i18n-media.js', 'i18n-coverage.js', 'detect-browser.js', 'mirror-userscript.js'
+  'i18n-banner.js', 'i18n-media.js', 'i18n-coverage.js', 'detect-browser.js',
+  'scan-bundle.js', 'mirror-userscript.js'
 ];
 
 const killHeadlessChrome = () => {

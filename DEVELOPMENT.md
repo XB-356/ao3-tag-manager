@@ -72,7 +72,8 @@ node test/all.js       # 全量跑，逐文件报通过数，任一失败即非�
 | `test/parse-tags.js` | 标签解析 | 9 |
 | `test/detect.js` | 站点识别（含 www 归一、访问验证页、镜像改版） | 24 |
 | `test/env-hosts.js` | 域名归一化与 match pattern（www 双覆盖） | 21 |
-| `test/mirror-scan.js` | 「所有网站」扫描脚本的注册 / 注销 | 11 |
+| `test/mirror-scan.js` | 「所有网站」扫描脚本的注册 / 注销 | 13 |
+| `test/scan-bundle.js` | 扫描脚本**真注进页面**能否挂出横幅（含挑战页） | 12 |
 | `test/detect-browser.js` | 自动检测横幅 / 忽略名单 / 油猴行为 | 10 |
 | `test/mirror-userscript.js` | 镜像域名 / 动态注册 / `file://` / 油猴版 | 22 |
 

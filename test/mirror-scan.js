@@ -140,6 +140,16 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     scan && scan.js
   );
   check('扫描脚本跨会话保留、document_idle 注入', scan && scan.persistAcrossSessions === true && scan.runAt === 'document_idle', scan);
+  check(
+    '扫描脚本带执行入口 scan.js（只放库文件会"加载但不执行"）',
+    scan && scan.js.indexOf('src/core/scan.js') !== -1,
+    scan && scan.js
+  );
+  check(
+    '扫描脚本带横幅样式（否则横幅是无样式的裸 div）',
+    scan && Array.isArray(scan.css) && scan.css.indexOf('src/lib/panel.css') !== -1,
+    scan && scan.css
+  );
 
   /* --- 撤销权限后再 sync：要注销 --- */
   on.state.allSites = false;

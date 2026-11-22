@@ -203,7 +203,13 @@ var _ao3tmExport = (function (root) {
      撤销权限时一并注销。 */
   const SCAN_ID = 'ao3tm-scan';
   const ALL_URLS = ['https://*/*', 'http://*/*'];
-  const SCAN_JS = ['src/lib/env-core.js', 'src/lib/env.js', 'src/lib/detect.js', 'src/lib/auto-detect.js'];
+  const SCAN_JS = [
+    'src/lib/env-core.js',
+    'src/lib/env.js',
+    'src/lib/detect.js',
+    'src/lib/auto-detect.js',
+    'src/core/scan.js'
+  ];
 
   function hasAllSitesPermission() {
     if (!api || !api.permissions) return Promise.resolve(false);
@@ -236,6 +242,7 @@ var _ao3tmExport = (function (root) {
           id: SCAN_ID,
           matches: ALL_URLS,
           js: SCAN_JS,
+          css: CSS_FILES,
           runAt: 'document_idle',
           allFrames: false,
           persistAcrossSessions: true
