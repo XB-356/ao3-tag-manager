@@ -174,6 +174,15 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     scan: both.state.registered.get('ao3tm-scan').js.length
   });
 
+  /* --- 两个入口都必须先把后台记住的镜像清单读回页面 ---
+     守的是用户报的"启用后刷新又弹一次启用横幅"：service worker 只能写
+     chrome.storage，而页面判定域名是同步读 localStorage 的，中间必须有
+    一次 hydrateCustomHosts，否则刷新后已启用的镜像又变成陌生站。 */
+  ['src/core/scan.js', 'src/core/main.js'].forEach(function (rel) {
+    const source = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    check(rel + ' 启动时会把镜像清单灌回页面（hydrateCustomHosts）', source.indexOf('hydrateCustomHosts') !== -1);
+  });
+
   await sleep(10);
   console.log('\n===== 结果 =====');
   console.log(results.length - failed + '/' + results.length + ' 通过');

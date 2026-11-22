@@ -21,7 +21,11 @@
 
   function start() {
     const store = root.AO3TM.store;
-    store.ready().then(function () {
+    // 镜像站域名清单存在 chrome.storage 里，页面判定是同步的，得先灌回 localStorage；
+    // 否则"已启用的镜像"在刷新后会被当成陌生站，横幅再弹一次。
+    const env = root.AO3TM.env;
+    const hostsReady = env && typeof env.hydrateCustomHosts === 'function' ? env.hydrateCustomHosts() : Promise.resolve();
+    Promise.all([store.ready(), hostsReady]).then(function () {
       pruneOldHidden();
       root.AO3TM.ui.init();
       if (root.AO3TM.focus) root.AO3TM.focus.apply();

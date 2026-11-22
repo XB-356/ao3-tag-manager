@@ -43,6 +43,41 @@
     }
   }
 
+  /* 后台把"已启用的镜像"写在 chrome.storage.local 里（key 见 mirrors.js 的 HOSTS_KEY），
+     而页面侧判定域名是同步函数，只能读 localStorage。两处不通就会出现
+     "明明启用过，刷新后又弹一次启用横幅"：service worker 里调 saveCustomHosts
+     根本写不进 localStorage（那里没有这个 API），页面这边也没人把 storage 读回来。
+     这个函数就是那道缺失的桥：把后台的清单灌进 localStorage 镜像，再照旧同步读取。 */
+  let customHostsPromise = null;
+  function hydrateCustomHosts() {
+    if (customHostsPromise) return customHostsPromise;
+    customHostsPromise = new Promise(function (resolve) {
+      try {
+        const store = api && api.storage && api.storage.local;
+        if (!store || !store.get) return resolve(readCustomHosts());
+        store.get(['ao3tm_hosts_v1', 'ao3tm_hosts'], function (data) {
+          if (api.runtime && api.runtime.lastError) {
+            /* 读失败就按空处理，别把页面卡住 */
+          }
+          const merged = [];
+          ['ao3tm_hosts_v1', 'ao3tm_hosts'].forEach(function (key) {
+            const list = data && data[key];
+            if (!Array.isArray(list)) return;
+            list.forEach(function (host) {
+              const name = normalizeHost(host);
+              if (name && merged.indexOf(name) === -1) merged.push(name);
+            });
+          });
+          if (merged.length) saveCustomHosts(merged); // 写进 localStorage 镜像
+          resolve(merged.length ? merged : readCustomHosts());
+        });
+      } catch (err) {
+        resolve(readCustomHosts());
+      }
+    });
+    return customHostsPromise;
+  }
+
   /** 剥掉 www 前缀：www.sbxz.org 与 sbxz.org 是同一个站，不该被当成两个域名 */
   function bareHost(value) {
     return String(value == null ? '' : value).trim().toLowerCase().replace(/^www\./, '');
@@ -123,7 +158,7 @@
 
   root.AO3TM = root.AO3TM || {};
   // 构建标记：排查"浏览器里跑的到底是不是最新代码"（与 manifest.version 保持一致）
-  root.AO3TM.BUILD = '1.2.4.5';
+  root.AO3TM.BUILD = '1.2.4.6';
 
   root.AO3TM.envGlobal = {
     mode: mode,
@@ -138,6 +173,7 @@
     isAo3Host: isAo3Host,
     readCustomHosts: readCustomHosts,
     saveCustomHosts: saveCustomHosts,
+    hydrateCustomHosts: hydrateCustomHosts,
     normalizeHost: normalizeHost,
     bareHost: bareHost,
     hostVariants: hostVariants,

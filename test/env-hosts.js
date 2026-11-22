@@ -23,6 +23,7 @@ function makeEnv(options) {
   const opts = options || {};
   const storage = {};
   if (opts.customHosts) storage.ao3tm_hosts = JSON.stringify(opts.customHosts);
+  const reads = { count: 0 };
   const sandbox = {
     console: console,
     location: { hostname: opts.hostname || 'example.com', protocol: 'https:' },
@@ -31,10 +32,32 @@ function makeEnv(options) {
       setItem: (key, value) => { storage[key] = String(value); }
     }
   };
+  if (opts.chromeStorage) {
+    // 模拟内容脚本：有 chrome.runtime / chrome.storage.local，但**没有 chrome.permissions**
+    sandbox.chrome = {
+      runtime: { id: 'test-extension', lastError: null },
+      storage: {
+        local: {
+          get: function (keys, cb) {
+            reads.count += 1;
+            const list = Array.isArray(keys) ? keys : [keys];
+            const data = {};
+            list.forEach(function (key) {
+              if (Object.prototype.hasOwnProperty.call(opts.chromeStorage, key)) data[key] = opts.chromeStorage[key];
+            });
+            setTimeout(function () { cb(data); }, 0);
+          }
+        }
+      }
+    };
+  }
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
   vm.runInContext(code, sandbox);
-  return sandbox.AO3TM.envGlobal;
+  const env = sandbox.AO3TM.envGlobal;
+  env.__reads = reads;
+  env.__storage = storage;
+  return env;
 }
 
 const env = makeEnv();
@@ -117,9 +140,52 @@ const customWww = makeEnv({ customHosts: ['www.sbxz.org'] });
 check('历史数据里存 www 形式也能读成裸域', customWww.readCustomHosts().indexOf('sbxz.org') !== -1, customWww.readCustomHosts());
 check('历史数据 www 形式：裸域访问也认', customWww.isAo3Host('sbxz.org') === true);
 
-console.log('\n===== 结果 =====');
-console.log(results.length - failed + '/' + results.length + ' 通过');
-if (failed) {
-  results.filter((r) => !r.ok).forEach((r) => console.log('  - ' + r.name + ' :: ' + JSON.stringify(r.detail)));
-}
-process.exit(failed ? 1 : 0);
+/* --- hydrateCustomHosts：后台记住的镜像清单要灌回页面 ---
+   这一条守的是用户报的"启用后刷新又弹一次启用横幅"：
+   service worker 把清单写进 chrome.storage，但页面判定域名是同步的、只读 localStorage，
+   没人做这道桥，刷新后就把已启用的站当陌生站。 */
+(async function () {
+  const fresh = makeEnv({
+    hostname: 'nlzq.one',
+    chromeStorage: { ao3tm_hosts_v1: ['nlzq.one', 'www.mera.moe', 'not a host'] }
+  });
+  check('hydrate 之前：页面还不知道这个镜像（复现 bug）', fresh.isAo3Host('nlzq.one') === false);
+  const hydrated = await fresh.hydrateCustomHosts();
+  check(
+    'hydrate 把 storage 里的清单灌进 localStorage',
+    hydrated.indexOf('nlzq.one') !== -1 && hydrated.indexOf('mera.moe') !== -1,
+    hydrated
+  );
+  check('hydrate 会过滤非法域名', hydrated.indexOf('not a host') === -1, hydrated);
+  check('hydrate 之后：已启用的镜像被认出来（不再弹横幅）', fresh.isAo3Host('nlzq.one') === true);
+  check('hydrate 之后：www 变体也认', fresh.isAo3Host('www.nlzq.one') === true);
+  check(
+    'hydrate 会写回 localStorage 镜像，后续同步读取也算',
+    JSON.parse(fresh.__storage.ao3tm_hosts || '[]').indexOf('nlzq.one') !== -1,
+    fresh.__storage.ao3tm_hosts
+  );
+  const again = await fresh.hydrateCustomHosts();
+  check('hydrate 只读一次 storage（memoized）', fresh.__reads.count === 1 && again.length === hydrated.length, {
+    reads: fresh.__reads.count,
+    again
+  });
+
+  const empty = makeEnv({ hostname: 'sbxz.org', chromeStorage: {} });
+  const emptyList = await empty.hydrateCustomHosts();
+  check('storage 为空时 hydrate 不抛异常且给出空清单', Array.isArray(emptyList) && emptyList.length === 0, emptyList);
+
+  const userscript = makeEnv({ customHosts: ['mera.moe'], hostname: 'mera.moe' });
+  const plain = await userscript.hydrateCustomHosts();
+  check('油猴版（没有 chrome）hydrate 直接返回 localStorage 里的值', plain.indexOf('mera.moe') !== -1, plain);
+})()
+  .catch(function (err) {
+    check('hydrateCustomHosts 不应抛异常', false, String(err && err.message ? err.message : err));
+  })
+  .then(function () {
+    console.log('\n===== 结果 =====');
+    console.log(results.length - failed + '/' + results.length + ' 通过');
+    if (failed) {
+      results.filter((r) => !r.ok).forEach((r) => console.log('  - ' + r.name + ' :: ' + JSON.stringify(r.detail)));
+    }
+    process.exit(failed ? 1 : 0);
+  });

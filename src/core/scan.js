@@ -11,7 +11,13 @@
     if (!auto) return;
     // 记一笔，方便在控制台里确认"扫描脚本真的跑到了这个页面"
     root.AO3TM.scan = { ran: true, at: Date.now() };
-    auto.autoRun();
+    // 先把后台记住的"已启用镜像"读回页面，否则刷新后判定不到这个域名，
+    // 会把已经启用过的站又当成陌生站弹一次横幅。
+    const env = root.AO3TM.env;
+    const ready = env && typeof env.hydrateCustomHosts === 'function' ? env.hydrateCustomHosts() : Promise.resolve();
+    Promise.resolve(ready).then(function () {
+      auto.autoRun();
+    });
   }
 
   if (document.readyState === 'loading') {
