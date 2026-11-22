@@ -158,15 +158,15 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   check('注销时确实调用了 unregisterContentScripts', on.state.unregisteredCalls.some((ids) => ids.indexOf('ao3tm-scan') !== -1), on.state.unregisteredCalls);
 
   /* --- 已启用镜像与扫描脚本互不干扰 --- */
-  const both = boot({ allSites: true, hostGranted: { 'https://ao3.cubeart.club/*': true } });
-  await both.mirrors.saveEnabled(['ao3.cubeart.club']);
+  const both = boot({ allSites: true, hostGranted: { 'https://sbxz.org/*': true } });
+  await both.mirrors.saveEnabled(['sbxz.org']);
   await both.mirrors.sync();
   const mirrorScript = both.state.registered.get('ao3tm-mirror');
   check(
     '镜像脚本与扫描脚本同时存在，且镜像 matches 含 www 变体',
     !!mirrorScript &&
       !!both.state.registered.get('ao3tm-scan') &&
-      mirrorScript.matches.indexOf('https://www.ao3.cubeart.club/*') !== -1,
+      mirrorScript.matches.indexOf('https://www.sbxz.org/*') !== -1,
     mirrorScript && mirrorScript.matches
   );
   check('扫描脚本用轻量文件表，镜像脚本用完整文件表', mirrorScript.js.length > both.state.registered.get('ao3tm-scan').js.length, {

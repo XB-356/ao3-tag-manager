@@ -76,8 +76,35 @@ check(
 /* --- isAo3Host --- */
 check('isAo3Host：官方站裸域', env.isAo3Host('archiveofourown.org') === true);
 check('isAo3Host：官方站 www 也算', env.isAo3Host('www.archiveofourown.org') === true);
-check('isAo3Host：预置镜像 www 也算', env.isAo3Host('www.ao3.cubeart.club') === true);
+check('isAo3Host：预置镜像 www 也算', env.isAo3Host('www.sbxz.org') === true);
 check('isAo3Host：完全无关的站不认', env.isAo3Host('www.example.com') === false);
+
+/* --- 预置镜像清单：四个新站都认，旧站已移除 --- */
+const PRESET_EXPECTED = ['sbxz.org', 'notfun.one', 'z.aoyu.moe', 'mera.moe'];
+check(
+  '预置镜像：四个新站裸域与 www 都认',
+  PRESET_EXPECTED.every((host) => env.isAo3Host(host) === true && env.isAo3Host('www.' + host) === true),
+  PRESET_EXPECTED.map((host) => [host, env.isAo3Host(host), env.isAo3Host('www.' + host)])
+);
+check(
+  '预置镜像：旧镜像已从清单移除',
+  ['ao3.cubeart.club', 'ao3.win', 'ao3.top', 'ao3l.online', 'archive.transformativeworks.org'].every(
+    (host) => env.isAo3Host(host) === false
+  ),
+  ['ao3.win', env.isAo3Host('ao3.win')]
+);
+check(
+  '预置镜像：每个站的注册/授权 patterns 都是 4 条（裸域+www × http/https）',
+  PRESET_EXPECTED.every((host) => {
+    const pats = env.hostToMatchPatterns(host);
+    return (
+      pats.length === 4 &&
+      pats.indexOf('https://' + host + '/*') !== -1 &&
+      pats.indexOf('https://www.' + host + '/*') !== -1
+    );
+  }),
+  env.hostToMatchPatterns('notfun.one')
+);
 
 /* --- 自定义域名：存裸域，www 也认 --- */
 const custom = makeEnv({ customHosts: ['sbxz.org'], hostname: 'www.sbxz.org' });

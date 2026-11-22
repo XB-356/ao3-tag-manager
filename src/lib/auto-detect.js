@@ -63,17 +63,38 @@
     }
   }
 
+  /**
+   * 是否已开启「所有网站」检测权限。
+   * 注意：chrome.permissions 在内容脚本里**不存在**（只有扩展页面才有），所以
+   * 页面里必须问 service worker，否则永远返回 false —— 扫描脚本真跑起来了也
+   * 因为 canAutoScan 为假而永不挂横幅（用户报"各类镜像站仍然无提示"就是它）。
+   */
   function hasAllSitesPermission() {
     return new Promise(function (resolve) {
       const api = env && env.chrome;
-      if (!api || !api.permissions) {
+      if (!api || !api.runtime) {
         resolve(false);
         return;
       }
-      api.permissions.contains({ origins: ALL_URLS }, function (granted) {
-        void api.runtime.lastError;
-        resolve(!!granted);
-      });
+      if (api.permissions && api.permissions.contains) {
+        api.permissions.contains({ origins: ALL_URLS }, function (granted) {
+          void api.runtime.lastError;
+          resolve(!!granted);
+        });
+        return;
+      }
+      if (!api.runtime.sendMessage) {
+        resolve(false);
+        return;
+      }
+      try {
+        api.runtime.sendMessage({ type: 'ao3tm:auto-status' }, function (reply) {
+          void api.runtime.lastError;
+          resolve(!!(reply && reply.granted));
+        });
+      } catch (err) {
+        resolve(false);
+      }
     });
   }
 

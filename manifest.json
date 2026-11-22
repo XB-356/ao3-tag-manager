@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AO3 标签管家 - 屏蔽 / 只看",
-  "version": "1.2.4.3",
+  "version": "1.2.4.4",
   "default_locale": "zh_CN",
   "description": "在 AO3（含镜像站）上记忆并管理标签与作者的屏蔽 / 只看规则，支持列表内快捷屏蔽、右键标签屏蔽、只看模式与界面汉化。",
   "icons": {
@@ -14,6 +14,14 @@
   "host_permissions": [
     "https://archiveofourown.org/*",
     "https://www.archiveofourown.org/*",
+    "https://sbxz.org/*",
+    "https://www.sbxz.org/*",
+    "https://notfun.one/*",
+    "https://www.notfun.one/*",
+    "https://z.aoyu.moe/*",
+    "https://www.z.aoyu.moe/*",
+    "https://mera.moe/*",
+    "https://www.mera.moe/*",
     "http://127.0.0.1/*",
     "http://localhost/*",
     "file:///*"
@@ -42,6 +50,14 @@
       "matches": [
         "https://archiveofourown.org/*",
         "https://www.archiveofourown.org/*",
+        "https://sbxz.org/*",
+        "https://www.sbxz.org/*",
+        "https://notfun.one/*",
+        "https://www.notfun.one/*",
+        "https://z.aoyu.moe/*",
+        "https://www.z.aoyu.moe/*",
+        "https://mera.moe/*",
+        "https://www.mera.moe/*",
         "http://127.0.0.1/*",
         "http://localhost/*",
         "file:///*"

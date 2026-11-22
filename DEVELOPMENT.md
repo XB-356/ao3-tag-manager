@@ -71,7 +71,7 @@ node test/all.js       # 全量跑，逐文件报通过数，任一失败即非�
 | `test/author-parse.js` | 作者名解析（含伪名与登录名） | 15 |
 | `test/parse-tags.js` | 标签解析 | 9 |
 | `test/detect.js` | 站点识别（含 www 归一、访问验证页、镜像改版） | 24 |
-| `test/env-hosts.js` | 域名归一化与 match pattern（www 双覆盖） | 21 |
+| `test/env-hosts.js` | 域名归一化与 match pattern（www 双覆盖、内置镜像清单） | 24 |
 | `test/mirror-scan.js` | 「所有网站」扫描脚本的注册 / 注销 | 13 |
 | `test/scan-bundle.js` | 扫描脚本**真注进页面**能否挂出横幅（含挑战页） | 12 |
 | `test/detect-browser.js` | 自动检测横幅 / 忽略名单 / 油猴行为 | 10 |
@@ -169,8 +169,14 @@ node test/shoot-detect.js    # 自动检测横幅
   `auto-detect.js` 的 `watchForLateAo3()` 会在 45 秒窗口里盯着 DOM，验证过后自动重判。
 - **「所有网站」权限 ≠ 自动注入。** 内容脚本能注入哪些站点由 manifest 的 `matches`
   决定，权限本身不会让陌生站点跑脚本。开启自动检测后 `mirrors.js` 会额外注册一个
-  轻量扫描脚本 `ao3tm-scan`（只含 `env-core` / `env` / `detect` / `auto-detect`，
-  matches 为 `*://*/*`），撤销权限时注销；只靠这一条，未知镜像才可能被自动发现。
+  轻量扫描脚本 `ao3tm-scan`（只含 `env-core` / `env` / `detect` / `auto-detect` +
+  入口 `core/scan.js`，matches 为 `*://*/*`），撤销权限时注销；只靠这一条，
+  未知镜像才可能被自动发现。
+- **内容脚本里没有 `chrome.permissions`。** 这个 API 只有扩展页面（弹窗 / 设置页 /
+  service worker）才有。所以：网页内面板点「开启自动检测」只能引导用户去设置页；
+  `auto-detect.js` 的 `hasAllSitesPermission()` 在页面里必须发 `ao3tm:auto-status`
+  问 background，否则恒为 false、横幅永远不挂（`1.2.4.4` 修的就是这个）。
+  单测给页面塞 `chrome` 桩时**故意不给 permissions**，就是为了守住这条。
 
 ---
 

@@ -13,13 +13,7 @@
   const TEST_HOSTS = ['127.0.0.1', 'localhost'];
 
   /** 预置的 AO3 镜像站（可在设置里增删；不预置可疑站点） */
-  const PRESET_MIRRORS = [
-    'archive.transformativeworks.org',
-    'ao3.cubeart.club',
-    'ao3.win',
-    'ao3.top',
-    'ao3l.online'
-  ];
+  const PRESET_MIRRORS = ['sbxz.org', 'notfun.one', 'z.aoyu.moe', 'mera.moe'];
 
   const api = root.chrome && root.chrome.runtime && root.chrome.runtime.id ? root.chrome : null;
 
@@ -129,7 +123,7 @@
 
   root.AO3TM = root.AO3TM || {};
   // 构建标记：排查"浏览器里跑的到底是不是最新代码"（与 manifest.version 保持一致）
-  root.AO3TM.BUILD = '1.2.4.3';
+  root.AO3TM.BUILD = '1.2.4.4';
 
   root.AO3TM.envGlobal = {
     mode: mode,

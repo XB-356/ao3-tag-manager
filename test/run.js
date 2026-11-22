@@ -440,12 +440,20 @@ async function main() {
   );
 
   // 恢复现场：确保 101/103 仍是被 Fluff 规则隐藏的状态，供场景 6 使用
+  // 注意：上一步"取消隐藏"后页面重排是异步的（防抖 + 观察者），全量连跑机器负载高时
+  // 900ms 的 sleep 可能不够 —— 这里必须等到稳定，否则会偶发拿到"多一张仍带隐藏类"的中间态。
+  const hiddenCountSettled = await waitFor(
+    `document.querySelectorAll('li.blurb.ao3tm-hidden').length === 2`,
+    '恢复现场：隐藏数稳定为 2',
+    8000
+  ).then(() => true).catch(() => false);
   const restoredState = await command('ao3tm:debug');
   record(
     '恢复现场：规则隐藏的 2 篇仍在（供临时显示用例使用）',
-    restoredState.counts.hiddenWorks === 0 &&
+    hiddenCountSettled &&
+      restoredState.counts.hiddenWorks === 0 &&
       (await evaluate(`document.querySelectorAll('li.blurb.ao3tm-hidden').length`)) === 2,
-    { counts: restoredState.counts, hiddenDom: await evaluate(`document.querySelectorAll('li.blurb.ao3tm-hidden').length`) }
+    { counts: restoredState.counts, settled: hiddenCountSettled, hiddenDom: await evaluate(`document.querySelectorAll('li.blurb.ao3tm-hidden').length`) }
   );
 
   // 场景 6：临时显示 / 恢复隐藏（统计条按钮）

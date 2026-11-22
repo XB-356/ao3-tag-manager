@@ -51,14 +51,18 @@ class Cdp {
   }
 }
 
-/* 页面里没有扩展环境，所以给一份最小 chrome 桩：只让 env-core 认出"扩展模式"，
-   并让权限查询一律回答"已授予所有网站"。 */
+/* 页面里没有扩展环境，所以给一份最小 chrome 桩：只让 env-core 认出"扩展模式"。
+   关键：**故意不提供 chrome.permissions** —— 真实的扫描脚本跑在内容脚本里也没有这个 API，
+   权限只能问 background（ao3tm:auto-status）。桩里若顺手给了 permissions，
+   就会把"内容脚本拿不到权限 API"这个真 bug 掩盖掉。 */
 const CHROME_STUB = `window.chrome = {
-  runtime: { id: 'scan-test', lastError: null, sendMessage: function (m, cb) { if (cb) cb({ ok: true }); } },
-  permissions: {
-    contains: function (d, cb) { cb(true); },
-    request: function (d, cb) { cb(true); },
-    remove: function (d, cb) { cb(true); }
+  runtime: {
+    id: 'scan-test',
+    lastError: null,
+    sendMessage: function (m, cb) {
+      var type = m && m.type;
+      if (cb) cb(type === 'ao3tm:auto-status' ? { granted: true } : { ok: true });
+    }
   },
   scripting: {
     getRegisteredContentScripts: function (d, cb) { cb([]); },

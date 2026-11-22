@@ -206,8 +206,8 @@ class Cdp {
     probeHosts: [
       'archiveofourown.org',
       'www.archiveofourown.org',
-      'ao3.cubeart.club',
-      'ao3.win',
+      'sbxz.org',
+      'mera.moe',
       'evil-random-site.com',
       'localhost'
     ],
@@ -224,8 +224,8 @@ class Cdp {
     probes &&
       probes['archiveofourown.org'] === true &&
       probes['www.archiveofourown.org'] === true &&
-      probes['ao3.cubeart.club'] === true &&
-      probes['ao3.win'] === true &&
+      probes['sbxz.org'] === true &&
+      probes['mera.moe'] === true &&
       probes['localhost'] === true &&
       probes['evil-random-site.com'] === false,
     probes

@@ -27,15 +27,7 @@ const DESCRIPTION = '在 AO3（含镜像站）上记忆并管理标签与作者�
 /* 官方站 + 预置镜像；用户可自行增删 @match 行。
    注意不要写通配全部站点的 match（如 https 加星号加斜杠星号），
    油猴会拒绝这种写法，而且也没必要。 */
-const PRESET_MIRRORS = [
-  'archive.transformativeworks.org',
-  'ao3.cubeart.club',
-  'ao3.win',
-  'ao3.top',
-  'ao3l.online',
-  'ao3mirror.com',
-  'www.ao3mirror.com'
-];
+const PRESET_MIRRORS = ['sbxz.org', 'notfun.one', 'z.aoyu.moe', 'mera.moe'];
 
 /* 裸域与 www 都要写进 @match：镜像站常把 sbxz.org 跳到 www.sbxz.org，
    只写一种时油猴在另一半域名上根本不执行脚本。 */

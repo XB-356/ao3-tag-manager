@@ -150,6 +150,14 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     }
     return undefined;
   }
+  // 内容脚本里没有 chrome.permissions，页面侧用它问"自动检测有没有开启"
+  if (message.type === 'ao3tm:auto-status') {
+    chrome.permissions.contains({ origins: ['https://*/*', 'http://*/*'] }, function (granted) {
+      void chrome.runtime.lastError;
+      sendResponse({ granted: !!granted });
+    });
+    return true;
+  }
   if (message.type === 'ao3tm:save-mirror') {
     // 权限已在调用方申请（内容脚本的点击 / 弹窗的点击都带用户手势）
     enableMirror(message.host).then(sendResponse);
