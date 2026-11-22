@@ -174,6 +174,33 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     scan: both.state.registered.get('ao3tm-scan').js.length
   });
 
+  /* --- 只勾了「所有网站」时，具体域名也必须注册内容脚本 ---
+     用户报"启用过的镜像刷新后没有悬浮球"就是这么来的：
+     清单里记着这个域名（横幅不再弹），但注册被权限检查挡掉，
+     内容脚本从未注入，页面上既没有工具条也没有悬浮球。 */
+  const allSitesOnly = boot({ allSites: true, hostGranted: {} });
+  await allSitesOnly.mirrors.saveEnabled(['nlzq.one']);
+  await allSitesOnly.mirrors.sync();
+  const wrapReg = allSitesOnly.state.registered.get('ao3tm-mirror');
+  check(
+    '「所有网站」已授权时，具体镜像域名一样要注册（含 www 变体）',
+    !!wrapReg &&
+      wrapReg.matches.indexOf('https://nlzq.one/*') !== -1 &&
+      wrapReg.matches.indexOf('https://www.nlzq.one/*') !== -1,
+    wrapReg && wrapReg.matches
+  );
+
+  /* --- 反向：只授权了别的域名时，不能凭空注册 --- */
+  const noPerm = boot({ allSites: false, hostGranted: {} });
+  await noPerm.mirrors.saveEnabled(['nlzq.one']);
+  await noPerm.mirrors.sync();
+  const noPermReg = noPerm.state.registered.get('ao3tm-mirror');
+  check(
+    '没有任何权限时不会注册该域名',
+    !noPermReg || noPermReg.matches.indexOf('https://nlzq.one/*') === -1,
+    noPermReg && noPermReg.matches
+  );
+
   /* --- 两个入口都必须先把后台记住的镜像清单读回页面 ---
      守的是用户报的"启用后刷新又弹一次启用横幅"：service worker 只能写
      chrome.storage，而页面判定域名是同步读 localStorage 的，中间必须有

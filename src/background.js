@@ -138,6 +138,12 @@ if (chrome.permissions && chrome.permissions.onRemoved) {
   });
 }
 
+/* service worker 每次被唤醒都会重新执行本文件，顺手把动态注册恢复一遍：
+   扩展更新 / 手动重载时 Chrome 会清掉 registerContentScripts 注册过的脚本，
+   只靠 onInstalled 在"手动重载未打包扩展"时并不一定触发，表现就是
+   "明明启用过的镜像，刷新后没有悬浮球和工具条"。 */
+syncMirrors();
+
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (!message || typeof message.type !== 'string') return undefined;
   // 内容脚本里没有 chrome.permissions，点权限类按钮时让它把用户送到设置页

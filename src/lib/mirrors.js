@@ -77,8 +77,18 @@ var _ao3tmExport = (function (root) {
     if (!api || !api.permissions) return Promise.resolve(false);
     return new Promise(function (resolve) {
       api.permissions.contains({ origins: patternsFor(host) }, function (granted) {
-        void api.runtime.lastError;
-        resolve(!!granted);
+        if (api.runtime.lastError) void api.runtime.lastError;
+        if (granted) {
+          resolve(true);
+          return;
+        }
+        /* 用户勾了"所有网站"时，那份权限已经覆盖任意镜像。Chrome 的
+           contains 对"宽泛授权 vs 具体 origin"不保证按子集算，这里再兜一次，
+           否则会出现"储存里记着已启用、却没注册内容脚本"——页面既没有工具条也没有横幅。 */
+        api.permissions.contains({ origins: ALL_URLS }, function (allGranted) {
+          void api.runtime.lastError;
+          resolve(!!allGranted);
+        });
       });
     });
   }

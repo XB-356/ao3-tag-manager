@@ -25,7 +25,14 @@
     // 否则"已启用的镜像"在刷新后会被当成陌生站，横幅再弹一次。
     const env = root.AO3TM.env;
     const hostsReady = env && typeof env.hydrateCustomHosts === 'function' ? env.hydrateCustomHosts() : Promise.resolve();
-    Promise.all([store.ready(), hostsReady]).then(function () {
+    // 兜底超时：storage 万一回调不回来（被其他扩展/隐私设置卡住），也不能让工具条永远不出现
+    const hostsSafe = Promise.race([
+      hostsReady,
+      new Promise(function (resolve) {
+        setTimeout(resolve, 800);
+      })
+    ]);
+    Promise.all([store.ready(), hostsSafe]).then(function () {
       pruneOldHidden();
       root.AO3TM.ui.init();
       if (root.AO3TM.focus) root.AO3TM.focus.apply();
