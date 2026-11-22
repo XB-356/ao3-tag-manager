@@ -1277,6 +1277,26 @@ async function main() {
   const fabHealed = await evaluate(`!!document.getElementById('ao3tm-fab')`);
   record('悬浮球被页面重渲染冲掉后会自动补回来', fabHealed === true, { fabHealed });
 
+  /* --- 反相深色：镜像站在 body 上加 invert 滤镜时，我们注入的浅底控件会被反相 --- */
+  await evaluate(
+    `(() => {
+      const s = document.createElement('style');
+      s.id = 'ao3tm-test-invert';
+      s.textContent = 'body { filter: invert(1) hue-rotate(180deg); }';
+      document.head.appendChild(s);
+      return true;
+    })()`
+  );
+  await sleep(2400);
+  const invertedMark = await evaluate(`document.documentElement.getAttribute('data-ao3tm-inverted')`);
+  const fabFilter = await evaluate(`(() => { const f = document.getElementById('ao3tm-fab'); return f ? getComputedStyle(f).filter : ''; })()`);
+  record(
+    'body 上的反相深色：打上标记并给注入节点反向抵消',
+    invertedMark === '1' && /invert\(/.test(String(fabFilter)),
+    { invertedMark, fabFilter }
+  );
+  await evaluate(`(() => { const s = document.getElementById('ao3tm-test-invert'); if (s) s.remove(); return true; })()`);
+
   // 用户主动「收起」过就不再补，尊重这个选择
   await evaluate(`(() => { const b = document.querySelector('#ao3tm-fab .ao3tm-fab-sub'); if (b) b.click(); return true; })()`);
   await sleep(300);

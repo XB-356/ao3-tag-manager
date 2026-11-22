@@ -1194,7 +1194,7 @@
 
   /** 返回 'dark' | 'light' */
   function detectPageTheme() {
-    const anchors = [document.querySelector('#main'), document.querySelector('#outer'), document.body];
+    const anchors = [document.documentElement, document.querySelector('#main'), document.querySelector('#outer'), document.body];
     for (let i = 0; i < anchors.length; i++) {
       const node = anchors[i];
       if (!node) continue;
@@ -1207,6 +1207,15 @@
         depth += 1;
       }
     }
+    /* 有些站点（尤其镜像自带的深色模式）把背景设在铺满整屏的伪元素/遮罩上，
+       祖先链上量不到任何不透明背景色。这种情况下用正文颜色反推：
+       深色模式通常配浅色文字，浅色模式配深色文字。 */
+    const textAnchors = [document.querySelector('#main'), document.querySelector('#workskin'), document.body, document.documentElement];
+    for (let i = 0; i < textAnchors.length; i++) {
+      if (!textAnchors[i]) continue;
+      const rgb = parseRgb(getComputedStyle(textAnchors[i]).color);
+      if (rgb) return luminance(rgb) > 0.55 ? 'dark' : 'light';
+    }
     // 量不到就退回系统偏好
     return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
@@ -1214,13 +1223,18 @@
   let lastAppliedTheme = null;
   let lastInverted = null;
 
-  /* 有些站点（含部分镜像）用 html { filter: invert(...) } 实现深色模式。
-     那样我们注入的控件会被一起反相：浅底白圆按钮在深色页面上变成深底深字，
+  /* 有些站点（含部分镜像）用 invert 滤镜实现深色模式。滤镜常加在 body 或外层
+     容器上（不一定在 html 上），所以我们逐层看；被反相的浅底控件会变成深底深字，
      看起来就是"悬浮球消失了"。检测到反相时给我们的节点再反一次抵消掉。 */
   function detectInverted() {
     try {
-      const filter = getComputedStyle(document.documentElement).filter || '';
-      return /invert\(/.test(filter);
+      const nodes = [document.documentElement, document.body, document.getElementById('outer'), document.getElementById('main')];
+      for (let i = 0; i < nodes.length; i++) {
+        if (!nodes[i]) continue;
+        const filter = getComputedStyle(nodes[i]).filter || '';
+        if (/invert\(/.test(filter)) return true;
+      }
+      return false;
     } catch (err) {
       return false;
     }
