@@ -1271,6 +1271,21 @@ async function main() {
   await evaluate(`document.querySelector('.ao3tm-panel-root [data-act="close"]').click()`);
   await evaluate(`(() => { const s = document.getElementById('ao3tm-test-dark'); if (s) s.remove(); return true; })()`);
 
+  /* --- 悬浮球自愈：镜像站切深色模式会整块重建 body，注入的节点会被冲掉 --- */
+  await evaluate(`(() => { const f = document.getElementById('ao3tm-fab'); if (f) f.remove(); return true; })()`);
+  await sleep(1600);
+  const fabHealed = await evaluate(`!!document.getElementById('ao3tm-fab')`);
+  record('悬浮球被页面重渲染冲掉后会自动补回来', fabHealed === true, { fabHealed });
+
+  // 用户主动「收起」过就不再补，尊重这个选择
+  await evaluate(`(() => { const b = document.querySelector('#ao3tm-fab .ao3tm-fab-sub'); if (b) b.click(); return true; })()`);
+  await sleep(300);
+  const fabHidden = await evaluate(`!document.getElementById('ao3tm-fab')`);
+  await evaluate(`(() => { const f = document.getElementById('ao3tm-fab'); if (f) f.remove(); return true; })()`);
+  await sleep(1600);
+  const fabStillHidden = await evaluate(`!document.getElementById('ao3tm-fab')`);
+  record('用户收起悬浮球后不会再被自动补回', fabHidden === true && fabStillHidden === true, { fabHidden, fabStillHidden });
+
   console.log('\n===== 结果 =====');
   const failed = results.filter((r) => !r.ok);
   console.log(results.length - failed.length + '/' + results.length + ' 通过');

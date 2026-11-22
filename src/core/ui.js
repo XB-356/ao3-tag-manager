@@ -605,6 +605,9 @@
 
   /* --------------------------------- 悬浮按钮 ------------------------------- */
 
+  /* 用户手动「收起」过就尊重这个选择，本次页面内不再自动补回 */
+  let fabDismissed = false;
+
   function injectFab() {
     if (document.getElementById(NS + '-fab')) return;
     const fab = document.createElement('div');
@@ -644,9 +647,19 @@
       refresh();
     });
     buttons[2].addEventListener('click', function () {
+      fabDismissed = true;
       fab.remove();
     });
     updateFab(toggleBtn);
+  }
+
+  /** 悬浮球是注入到 body 里的节点，站点换肤 / 局部重渲染（有些镜像切深色模式会
+      整块重建 body）会把它冲掉；这里做自愈，丢了就补回来。用户主动收起过则不管。 */
+  function ensureFab() {
+    if (fabDismissed) return;
+    if (!document.body) return;
+    if (document.getElementById(NS + '-fab')) return;
+    injectFab();
   }
 
   /** 悬浮按钮的"临时显示"状态同步：图标与提示随状态变化 */
@@ -687,6 +700,7 @@
       scheduled = false;
       try {
         run();
+        ensureFab();
       } catch (err) {
         console.error('[AO3 标签管家] 刷新出错', err);
       }
@@ -1198,6 +1212,19 @@
   }
 
   let lastAppliedTheme = null;
+  let lastInverted = null;
+
+  /* 有些站点（含部分镜像）用 html { filter: invert(...) } 实现深色模式。
+     那样我们注入的控件会被一起反相：浅底白圆按钮在深色页面上变成深底深字，
+     看起来就是"悬浮球消失了"。检测到反相时给我们的节点再反一次抵消掉。 */
+  function detectInverted() {
+    try {
+      const filter = getComputedStyle(document.documentElement).filter || '';
+      return /invert\(/.test(filter);
+    } catch (err) {
+      return false;
+    }
+  }
 
   function applyTheme() {
     const settings = store.get().settings;
@@ -1210,6 +1237,12 @@
     if (theme !== lastAppliedTheme) {
       lastAppliedTheme = theme;
       document.documentElement.setAttribute('data-ao3tm-theme', theme);
+    }
+    const inverted = detectInverted();
+    if (inverted !== lastInverted) {
+      lastInverted = inverted;
+      if (inverted) document.documentElement.setAttribute('data-ao3tm-inverted', '1');
+      else document.documentElement.removeAttribute('data-ao3tm-inverted');
     }
     return theme;
   }
@@ -1233,7 +1266,19 @@
   function watch() {
     const observer = new MutationObserver(function (mutations) {
       let relevant = false;
+      let oursGone = false;
       mutations.forEach(function (mutation) {
+        // 有人把我们的节点删掉了（站点换肤重建 body / innerHTML 重刷）
+        if (mutation.removedNodes && mutation.removedNodes.length) {
+          for (let i = 0; i < mutation.removedNodes.length; i++) {
+            const node = mutation.removedNodes[i];
+            if (node.nodeType !== 1) continue;
+            if (node.id === NS + '-fab' || (node.querySelector && node.querySelector('#' + NS + '-fab'))) {
+              oursGone = true;
+              break;
+            }
+          }
+        }
         if (!relevant && mutation.addedNodes && mutation.addedNodes.length) {
           Array.prototype.forEach.call(mutation.addedNodes, function (node) {
             if (relevant || node.nodeType !== 1) return;
@@ -1244,8 +1289,11 @@
         }
       });
       if (relevant) refresh();
+      if (oursGone) ensureFab();
     });
-    observer.observe(document.body, { childList: true, subtree: true });
+    /* 观察 documentElement 而不是 body：镜像站切主题时可能连 body 一起替换，
+       只盯 body 的话观察器会跟着那个被丢弃的节点一起失效。 */
+    observer.observe(document.documentElement, { childList: true, subtree: true });
   }
 
   function init() {
