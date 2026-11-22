@@ -60,8 +60,9 @@ const CHROME_STUB = `window.chrome = {
     id: 'scan-test',
     lastError: null,
     sendMessage: function (m, cb) {
+      (window.__sent = window.__sent || []).push(m && m.type);
       var type = m && m.type;
-      if (cb) cb(type === 'ao3tm:auto-status' ? { granted: true } : { ok: true });
+      if (cb) cb(type === 'ao3tm:auto-status' ? { granted: true } : { ok: true, host: m && m.host });
     }
   },
   scripting: {
@@ -178,6 +179,30 @@ function check(name, ok, detail) {
       '陌生域名上提供"启用 / 以后再说 / 一直忽略"三个操作',
       !!banner && ['enable', 'dismiss', 'never'].every((act) => banner.acts.indexOf(act) !== -1),
       banner && banner.acts
+    );
+
+    /* 1b. 点「启用」：内容脚本发不起权限弹窗，但"所有网站"权限已经开着，
+           正确的做法是直接让后台注册，而不是立刻变成"重试"。
+           （用户报"点击授权后显示重试、刷新后未生效"就是这条路径） */
+    const clicked = await evaluate(`(function () {
+      const btn = document.querySelector('#ao3tm-auto-banner [data-act="enable"]');
+      if (!btn) return false;
+      btn.click();
+      return true;
+    })()`);
+    await sleep(320);
+    const sentAfter = await evaluate('window.__sent || []');
+    const labelAfter = await evaluate(`(function () {
+      const btn = document.querySelector('#ao3tm-auto-banner [data-act="enable"]');
+      return btn ? btn.textContent.trim() : null;
+    })()`);
+    check(
+      '点「启用」直接走后台注册，不出现"重试"',
+      clicked === true &&
+        sentAfter.indexOf('ao3tm:save-mirror') !== -1 &&
+        !/重试/.test(String(labelAfter)) &&
+        !/失败/.test(String(labelAfter)),
+      { sent: sentAfter, label: labelAfter }
     );
 
     /* 2. 已启用的域名（127.0.0.1 在测试域名表里）：判定为 AO3，但不该挂横幅 */

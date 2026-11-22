@@ -224,12 +224,21 @@
               }, 700);
             } else {
               btn.disabled = false;
-              const reason =
-                outcome && outcome.reason === 'denied'
+              const reason = outcome && outcome.reason;
+              // 内容脚本发不起授权弹窗（见 enableCurrent 里的说明）。真被拒时把用户
+              // 领到扩展自己的页面去点，那里才有合法的用户手势。
+              if (reason === 'denied' || reason === 'need-permission') {
+                btn.textContent = '去设置页启用';
+                if (root.AO3TM.ui) root.AO3TM.ui.toast('需要你在扩展设置页里确认一次授权，已为你打开');
+                openOptions();
+                return;
+              }
+              const hint =
+                reason === 'denied'
                   ? '你取消了授权'
-                  : '启用失败：' + ((outcome && outcome.reason) || '未知原因');
+                  : '启用失败：' + (reason || '未知原因');
               btn.textContent = '重试';
-              if (root.AO3TM.ui) root.AO3TM.ui.toast(reason);
+              if (root.AO3TM.ui) root.AO3TM.ui.toast(hint);
             }
           })
           .catch(function (err) {
@@ -256,10 +265,29 @@
     return box;
   }
 
+  /** 打开扩展设置页（内容脚本里没法直接调 chrome.runtime.openOptionsPage 时走后台消息） */
+  function openOptions() {
+    const api = env && env.chrome;
+    if (!api || !api.runtime) return;
+    try {
+      if (api.runtime.sendMessage) {
+        api.runtime.sendMessage({ type: 'ao3tm:open-options' }, function () {
+          void api.runtime.lastError;
+        });
+        return;
+      }
+      if (api.runtime.openOptionsPage) api.runtime.openOptionsPage();
+    } catch (err) {
+      /* 忽略 */
+    }
+  }
+
   /** 申请权限并注册当前域名，成功后刷新页面 */
   function enableCurrent(host) {
     const api = env && env.chrome;
-    if (!api || !api.permissions) return Promise.resolve({ ok: false, reason: 'unsupported' });
+    if (!api || !api.runtime || !api.runtime.sendMessage) {
+      return Promise.resolve({ ok: false, reason: 'unsupported' });
+    }
     const origins = [];
     if (root.AO3TM.env && root.AO3TM.env.hostToMatchPatterns) {
       root.AO3TM.env.hostToMatchPatterns(host).forEach(function (pattern) {
@@ -268,17 +296,27 @@
     } else {
       origins.push(env.hostToMatchPattern(host));
     }
-    // 必须在用户点击的同一个调用栈里发起申请
+    const save = function () {
+      return new Promise(function (resolve) {
+        api.runtime.sendMessage({ type: 'ao3tm:save-mirror', host: host }, function (result) {
+          void api.runtime.lastError;
+          resolve(result || { ok: false, reason: 'register-failed' });
+        });
+      });
+    };
+    /* chrome.permissions 只有扩展页面才有，内容脚本里是 undefined。
+       而横幅能显示出来，本身就说明"所有网站"权限已经开了（否则扫描脚本不会注入、
+       也就不会判定成 AO3）——那一份权限已经覆盖了这个域名，直接让后台注册即可。
+       旧代码在这里拿不到 api.permissions 就判 unsupported，于是点启用永远"重试"。 */
+    if (!api.permissions || !api.permissions.request) return save();
+    // 扩展页面里：必须在用户点击的同一个调用栈里发起申请
     return new Promise(function (resolve) {
       api.permissions.request({ origins: origins }, function (granted) {
         if (api.runtime.lastError || !granted) {
           resolve({ ok: false, reason: 'denied' });
           return;
         }
-        api.runtime.sendMessage({ type: 'ao3tm:save-mirror', host: host }, function (result) {
-          void api.runtime.lastError;
-          resolve(result || { ok: false, reason: 'register-failed' });
-        });
+        save().then(resolve);
       });
     });
   }
