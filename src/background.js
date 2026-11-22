@@ -140,6 +140,16 @@ if (chrome.permissions && chrome.permissions.onRemoved) {
 
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (!message || typeof message.type !== 'string') return undefined;
+  // 内容脚本里没有 chrome.permissions，点权限类按钮时让它把用户送到设置页
+  if (message.type === 'ao3tm:open-options') {
+    try {
+      chrome.runtime.openOptionsPage();
+      sendResponse({ ok: true });
+    } catch (err) {
+      sendResponse({ ok: false, reason: String(err) });
+    }
+    return undefined;
+  }
   if (message.type === 'ao3tm:save-mirror') {
     // 权限已在调用方申请（内容脚本的点击 / 弹窗的点击都带用户手势）
     enableMirror(message.host).then(sendResponse);

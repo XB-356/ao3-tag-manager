@@ -75,6 +75,7 @@ node test/all.js       # 全量跑，逐文件报通过数，任一失败即非�
 | `test/mirror-scan.js` | 「所有网站」扫描脚本的注册 / 注销 | 13 |
 | `test/scan-bundle.js` | 扫描脚本**真注进页面**能否挂出横幅（含挑战页） | 12 |
 | `test/detect-browser.js` | 自动检测横幅 / 忽略名单 / 油猴行为 | 10 |
+| `test/auto-detect-options.js` | 自动检测开关：扩展页能申请权限、网页内引导去设置页 | 6 |
 | `test/mirror-userscript.js` | 镜像域名 / 动态注册 / `file://` / 油猴版 | 22 |
 
 > 测试环境需要本机有 Chrome（可用环境变量 `CHROME` 指定路径）。

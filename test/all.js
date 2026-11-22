@@ -17,7 +17,7 @@ const UNIT = [
 const BROWSER = [
   'run.js', 'theme-i18n.js', 'i18n-comment.js', 'i18n-about.js',
   'i18n-banner.js', 'i18n-media.js', 'i18n-coverage.js', 'detect-browser.js',
-  'scan-bundle.js', 'mirror-userscript.js'
+  'auto-detect-options.js', 'scan-bundle.js', 'mirror-userscript.js'
 ];
 
 const killHeadlessChrome = () => {

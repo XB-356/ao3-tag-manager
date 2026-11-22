@@ -100,6 +100,8 @@
       grantAllSites();
     } else if (act === 'detect-revoke') {
       revokeAllSites();
+    } else if (act === 'detect-open-options') {
+      needsExtensionPageToast('开启自动检测');
     } else if (act === 'detect-reset-skip') {
       const auto = autoDetectModule();
       if (auto) {
@@ -111,6 +113,10 @@
     } else if (act === 'mirror-enable') {
       const host = target.getAttribute('data-host');
       const mod = mirrorModule();
+      if (mod && host && !permissionsApi()) {
+        needsExtensionPageToast('启用镜像 ' + host);
+        return;
+      }
       if (mod && host) {
         mod.enableFromPage(host).then(function (result) {
           if (root.AO3TM.ui) root.AO3TM.ui.toast(mirrorStatusText(result));
@@ -590,6 +596,7 @@
     if (!auto || !detector) return '';
     const granted = allSitesGranted === true;
     const unknown = allSitesGranted === null;
+    const canRequest = !!permissionsApi();
 
     const status = unknown
       ? '<div class="ao3tm-empty">正在读取权限状态…</div>'
@@ -604,10 +611,16 @@
       '<div class="ao3tm-add-row">' +
       (granted
         ? '<button type="button" class="ao3tm-btn ao3tm-btn-ghost" data-act="detect-revoke">关闭自动检测（收回权限）</button>'
-        : '<button type="button" class="ao3tm-btn" data-act="detect-grant">开启自动检测</button>') +
+        : canRequest
+          ? '<button type="button" class="ao3tm-btn" data-act="detect-grant">开启自动检测</button>'
+          : '<button type="button" class="ao3tm-btn" data-act="detect-open-options">去设置页开启自动检测</button>') +
       '<button type="button" class="ao3tm-btn ao3tm-btn-ghost" data-act="detect-reset-skip">清空忽略名单</button>' +
       '</div>' +
-      '<div class="ao3tm-hint">开启后内容脚本才有机会在每个网站上运行。判定结果只会本地使用，不上传任何数据。</div>' +
+      '<div class="ao3tm-hint">' +
+      (canRequest
+        ? '开启后内容脚本才有机会在每个网站上运行。判定结果只会本地使用，不上传任何数据。'
+        : '浏览器只允许扩展自己的页面（点扩展图标弹出的那个窗口）申请权限，网页里的面板做不到，所以这里只给一个去设置页的入口。') +
+      '</div>' +
       '</div>'
     );
   }
@@ -663,32 +676,89 @@
       '</div>'
     );
   }
-  /** 申请「所有网站」权限（必须在用户手势里调用） */
+  /**
+   * 拿到 chrome.permissions —— 注意：**内容脚本里没有这个 API**，只有扩展自己的
+   * 页面（弹窗 / 设置页）才有。所以网页里的面板不能直接弹授权框，必须把用户
+   * 送到设置页。之前这里判断的是 `!api.permissions` 却提示"油猴脚本版"，把
+   * "在网页里"错当成"在油猴里"，误导性极强（用户报过：装了 Chrome 插件却提示
+   * 油猴版没有运行时权限）。
+   */
+  function permissionsApi() {
+    const api = root.AO3TM.env && root.AO3TM.env.chrome;
+    return api && api.permissions ? api.permissions : null;
+  }
+
+  /** 当前页面是不是扩展自己的页面 */
+  function inExtensionPage() {
+    return /^[a-z-]*-extension:$/.test(location.protocol);
+  }
+
+  /** 把用户送到能申请权限的页面（设置页 / 弹窗） */
+  function openOptionsPage() {
+    const api = root.AO3TM.env && root.AO3TM.env.chrome;
+    if (api && api.runtime && api.runtime.sendMessage) {
+      try {
+        api.runtime.sendMessage({ type: 'ao3tm:open-options' }, function () {
+          void (api.runtime.lastError);
+        });
+        return;
+      } catch (err) {
+        /* 落到下面的兜底 */
+      }
+    }
+    if (api && api.runtime && api.runtime.openOptionsPage) {
+      try {
+        api.runtime.openOptionsPage();
+      } catch (err) {
+        /* ignore */
+      }
+    }
+  }
+
+  function needsExtensionPageToast(what) {
+    if (root.AO3TM.ui) {
+      root.AO3TM.ui.toast('网页里不能直接申请权限，正在打开扩展设置页' + (what ? '（' + what + '）' : ''));
+    }
+    openOptionsPage();
+  }
+
+  /** 申请「所有网站」权限（必须在用户手势里调用，且只能在扩展页面） */
   function grantAllSites() {
     const auto = autoDetectModule();
-    const api = root.AO3TM.env && root.AO3TM.env.chrome;
-    if (!auto || !api || !api.permissions) {
-      if (root.AO3TM.ui) root.AO3TM.ui.toast('油猴脚本版没有运行时权限，请把域名加进脚本头 @match');
+    if (!auto) {
+      if (root.AO3TM.ui) root.AO3TM.ui.toast('扩展缺少自动检测模块，请重新加载扩展');
       return;
     }
-    api.permissions.request({ origins: auto.ALL_URLS }, function (granted) {
+    const permissions = permissionsApi();
+    if (!permissions) {
+      needsExtensionPageToast('开启自动检测');
+      return;
+    }
+    const api = root.AO3TM.env.chrome;
+    permissions.request({ origins: auto.ALL_URLS }, function (granted) {
       if (api.runtime.lastError || !granted) {
         if (root.AO3TM.ui) root.AO3TM.ui.toast('你取消了授权，自动检测未开启');
         return;
       }
       allSitesGranted = true;
       if (root.AO3TM.ui) root.AO3TM.ui.toast('已开启自动检测：遇到 AO3 镜像会在页面顶部提示');
-      // 权限刚拿到，立刻在当前页面跑一次检测，省得等刷新
-      auto.autoRun();
+      // 权限刚拿到，若当前是普通网页就立刻跑一次检测，省得等刷新；
+      // 设置页本身是扩展页面，没有可检测的页面。
+      if (/^https?:$/.test(location.protocol)) auto.autoRun();
       render();
     });
   }
 
   function revokeAllSites() {
     const auto = autoDetectModule();
-    const api = root.AO3TM.env && root.AO3TM.env.chrome;
-    if (!auto || !api || !api.permissions) return;
-    api.permissions.remove({ origins: auto.ALL_URLS }, function () {
+    if (!auto) return;
+    const permissions = permissionsApi();
+    if (!permissions) {
+      needsExtensionPageToast('关闭自动检测');
+      return;
+    }
+    const api = root.AO3TM.env.chrome;
+    permissions.remove({ origins: auto.ALL_URLS }, function () {
       void api.runtime.lastError;
       allSitesGranted = false;
       auto.removeBanner();
@@ -713,6 +783,10 @@
     const host = root.AO3TM.env ? root.AO3TM.env.normalizeHost(input ? input.value : '') : '';
     if (!host) {
       if (root.AO3TM.ui) root.AO3TM.ui.toast('域名格式不对，示例：ao3.example.com');
+      return;
+    }
+    if (!permissionsApi()) {
+      needsExtensionPageToast('启用镜像 ' + host);
       return;
     }
     // 注意：权限申请必须在用户手势里发起，所以这里直接调，不要放进 await 之后的回调
