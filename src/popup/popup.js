@@ -39,12 +39,19 @@
 
   /** 官方站 / 本地测试域：内容脚本是静态注入的 */
   function isStaticHost(host) {
-    return (
-      host === 'archiveofourown.org' ||
-      host === 'www.archiveofourown.org' ||
-      host === '127.0.0.1' ||
-      host === 'localhost'
-    );
+    const name = window.AO3TM.env && window.AO3TM.env.bareHost ? window.AO3TM.env.bareHost(host) : String(host || '').replace(/^www\./, '');
+    return name === 'archiveofourown.org' || name === '127.0.0.1' || name === 'localhost';
+  }
+
+  /**
+   * 只看域名判断"值不值得检测"不够用：像 sbxz.org 这种域名里没有 ao3/mirror 字样，
+   * 但页面标题会写 "Archive of Our Own"（或镜像自己的 "AO3 Mirror"）。
+   * 标签页标题是弹窗就能拿到的信息，拿它补一道线索。
+   */
+  function titleLooksLikeAo3(title) {
+    const text = String(title || '');
+    if (!text) return false;
+    return /archive of our own|\bao3\b/i.test(text);
   }
 
   /**
@@ -64,7 +71,7 @@
     const enableBtn = document.getElementById('enable-site');
     const host = tab && tab.url ? hostOf(tab.url) : '';
     const httpish = /^https?:/.test(tab && tab.url ? tab.url : '');
-    const suspicious = httpish && domainLooksLikeAo3(host);
+    const suspicious = httpish && (domainLooksLikeAo3(host) || titleLooksLikeAo3(tab && tab.title));
 
     if (!host || (!isStaticHost(host) && !suspicious)) {
       el.textContent = '当前标签页不是 AO3——规则仍会保存，打开 AO3 后自动生效。';

@@ -20,8 +20,12 @@ var _ao3tmExport = (function (root) {
 
   /** 静态声明的域名，无需动态注册 */
   function isStaticHost(host) {
-    const name = String(host || '').toLowerCase();
-    return env.DEFAULT_HOSTS.indexOf(name) !== -1 || env.TEST_HOSTS.indexOf(name) !== -1;
+    const raw = String(host || '').toLowerCase();
+    const name = env.bareHost ? env.bareHost(raw) : raw;
+    const hit = function (value) {
+      return env.DEFAULT_HOSTS.indexOf(value) !== -1 || env.TEST_HOSTS.indexOf(value) !== -1;
+    };
+    return hit(name) || hit(raw);
   }
 
   /* ------------------------------ 已启用域名清单 ------------------------------ */
@@ -192,6 +196,60 @@ var _ao3tmExport = (function (root) {
     });
   }
 
+  /* --------------------------- 「所有网站」扫描脚本 --------------------------- */
+  /* 内容脚本能注入哪些站点由 manifest 的 matches 决定，光拿到 <all_urls> 权限
+     并不会让陌生站点自动注入——未知镜像就永远发现不了。
+     所以用户开了「自动检测」之后，另注册一个轻量扫描脚本（只含 detect + 横幅），
+     撤销权限时一并注销。 */
+  const SCAN_ID = 'ao3tm-scan';
+  const ALL_URLS = ['https://*/*', 'http://*/*'];
+  const SCAN_JS = ['src/lib/env-core.js', 'src/lib/env.js', 'src/lib/detect.js', 'src/lib/auto-detect.js'];
+
+  function hasAllSitesPermission() {
+    if (!api || !api.permissions) return Promise.resolve(false);
+    return new Promise(function (resolve) {
+      api.permissions.contains({ origins: ALL_URLS }, function (granted) {
+        void api.runtime.lastError;
+        resolve(!!granted);
+      });
+    });
+  }
+
+  function registerScanner(enabled) {
+    if (!api || !api.scripting) return Promise.resolve(false);
+    return new Promise(function (resolve) {
+      api.scripting.getRegisteredContentScripts({ ids: [SCAN_ID] }, function (existing) {
+        if (api.runtime.lastError) console.warn('[AO3 标签管家] 读取扫描脚本注册信息失败：' + api.runtime.lastError.message);
+        const has = !!(existing && existing.length);
+        if (!enabled) {
+          if (!has) {
+            resolve(false);
+            return;
+          }
+          api.scripting.unregisterContentScripts({ ids: [SCAN_ID] }, function () {
+            void api.runtime.lastError;
+            resolve(false);
+          });
+          return;
+        }
+        const script = {
+          id: SCAN_ID,
+          matches: ALL_URLS,
+          js: SCAN_JS,
+          runAt: 'document_idle',
+          allFrames: false,
+          persistAcrossSessions: true
+        };
+        const done = function () {
+          void api.runtime.lastError;
+          resolve(true);
+        };
+        if (has) api.scripting.updateContentScripts([script], done);
+        else api.scripting.registerContentScripts([script], done);
+      });
+    });
+  }
+
   /** 把清单同步到动态注册（service worker 启动、或增删域名后调用） */
   async function sync() {
     if (!api || !api.scripting) return listEnabled();
@@ -201,6 +259,7 @@ var _ao3tmExport = (function (root) {
       if (await hasPermission(enabled[i])) granted.push(enabled[i]);
     }
     await registerHosts(granted);
+    await registerScanner(await hasAllSitesPermission());
     return enabled;
   }
 
@@ -335,9 +394,13 @@ var _ao3tmExport = (function (root) {
   root.AO3TM.mirrors = {
     HOSTS_KEY: HOSTS_KEY,
     SCRIPT_ID: SCRIPT_ID,
+    SCAN_ID: SCAN_ID,
     JS_FILES: JS_FILES,
+    SCAN_JS: SCAN_JS,
     CSS_FILES: CSS_FILES,
     isStaticHost: isStaticHost,
+    registerScanner: registerScanner,
+    hasAllSitesPermission: hasAllSitesPermission,
     listEnabled: listEnabled,
     saveEnabled: saveEnabled,
     hasPermission: hasPermission,

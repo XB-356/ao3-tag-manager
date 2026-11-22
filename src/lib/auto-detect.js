@@ -192,7 +192,8 @@
       if (act === 'enable') {
         btn.disabled = true;
         btn.textContent = '正在申请授权…';
-        enableCurrent(result.host)
+        // 用真实 hostname（可能是 www.sbxz.org）：权限模式会同时覆盖 www 与非 www
+        enableCurrent(result.pageHost || result.host)
           .then(function (outcome) {
             if (outcome && outcome.ok) {
               btn.textContent = '已启用，刷新页面后生效';
@@ -270,6 +271,56 @@
   }
 
   /**
+   * 有些镜像站前面挂了一层「访问验证 / 人机校验」：首包是一张挑战页，
+   * 通过后靠 JS 换掉 DOM 或原地导航，不一定触发我们能再跑一次的内容脚本注入。
+   * 所以给一段观察窗口：页面一变就重新判定，一旦像 AO3 就把横幅挂出来。
+   */
+  let lateWatcher = null;
+
+  function watchForLateAo3() {
+    if (lateWatcher) return;
+    if (typeof root.MutationObserver !== 'function') return;
+    if (!document.body) return;
+
+    const started = Date.now();
+    const LIMIT = 45000;
+    let debounce = 0;
+    let closed = false;
+
+    const stop = function () {
+      if (closed) return;
+      closed = true;
+      if (debounce) clearTimeout(debounce);
+      if (lateWatcher) {
+        lateWatcher.disconnect();
+        lateWatcher = null;
+      }
+    };
+
+    const evaluate = function () {
+      if (closed) return;
+      const next = check();
+      if (!next.isAo3) {
+        if (Date.now() - started > LIMIT) stop();
+        return;
+      }
+      stop();
+      if (next.enabledHere) return;
+      mountBanner(next);
+    };
+
+    lateWatcher = new root.MutationObserver(function () {
+      if (closed) return;
+      if (debounce) clearTimeout(debounce);
+      debounce = setTimeout(evaluate, 900);
+    });
+    lateWatcher.observe(document.body, { childList: true, subtree: true });
+    // 挑战页常常什么都不改、直接整页跳走；给一次兜底复查
+    setTimeout(evaluate, 4000);
+    setTimeout(stop, LIMIT + 8000);
+  }
+
+  /**
    * 自动检测入口。只有拿到「所有网站」权限时才会真的扫描陌生站点，
    * 否则内容脚本本来就不会跑到这些站点上，这里什么也不做。
    */
@@ -286,6 +337,9 @@
     return checkAsync().then(function (result) {
       if (result.canAutoScan && result.isAo3) {
         mountBanner(result);
+      } else if (!result.isAo3 && (result.challenge || result.score > 0)) {
+        // 挑战页 / 半像半不像：留一段观察窗口，等页面变成真正的 AO3
+        watchForLateAo3();
       }
       return result;
     });

@@ -15,11 +15,20 @@
 
   const LEVELS = { high: 6, medium: 3 };
 
+  /* 访问验证 / 人机校验页的特征。镜像站（尤其国内镜像）常在前面挂一层
+     "访问验证"，首包完全没有 AO3 结构，检测只能拿到一张挑战页；
+     识别出来才能告诉用户"先过验证再看"，也才好安排过一会儿重新判定。 */
+  const CHALLENGE_RE = /访问验证|正在验证您的浏览器|正在验证|checking your browser|verifying you are human|just a moment|cf-browser-verification|challenge-platform|__cf_chl|_shield|ddos-guard|sucuri_cloudproxy/i;
+
+  /** 取真实 hostname（保留 www、去端口），归一化留给 hostOf 做 */
+  function rawHostOf(value) {
+    const host = String(value == null ? '' : value).trim().toLowerCase();
+    return host.replace(/^[a-z]+:\/\//, '').replace(/\/.*$/, '').replace(/:\d+$/, '');
+  }
+
   /** 归一化域名：去掉协议、路径、端口、www 前缀 */
   function hostOf(value) {
-    let host = String(value == null ? '' : value).trim().toLowerCase();
-    host = host.replace(/^[a-z]+:\/\//, '').replace(/\/.*$/, '').replace(/:\d+$/, '');
-    return host.replace(/^www\./, '');
+    return rawHostOf(value).replace(/^www\./, '');
   }
 
   /**
@@ -51,6 +60,46 @@
     } catch (err) {
       return [];
     }
+  }
+
+  /** 读文本，取不到就返回空串（document / body / title 任一缺失都不能抛） */
+  function textOf(value, limit) {
+    try {
+      const text = value == null ? '' : String(value);
+      return limit ? text.slice(0, limit) : text;
+    } catch (err) {
+      return '';
+    }
+  }
+
+  /**
+   * 判断当前页是不是「访问验证 / 人机校验」挑战页。
+   * 只做识别，不作为 AO3 证据——挑战页本身什么也证明不了。
+   */
+  function challengeInfo(doc) {
+    if (!doc) return null;
+    const parts = [];
+    parts.push(textOf(doc.title, 200));
+    let body = null;
+    try {
+      body = doc.body;
+    } catch (err) {
+      body = null;
+    }
+    if (body) {
+      parts.push(textOf(body.innerText || body.textContent, 1200));
+    }
+    let html = '';
+    try {
+      html = textOf(doc.documentElement && doc.documentElement.outerHTML, 2500);
+    } catch (err) {
+      html = '';
+    }
+    parts.push(html);
+    const hay = parts.join(' ');
+    if (!hay) return null;
+    const hit = hay.match(CHALLENGE_RE);
+    return hit ? { marker: hit[0] } : null;
   }
 
   /**
@@ -100,6 +149,18 @@
     if (pick(doc, 'a[href="/works/search"], a[href="/tags"], a[href="/collections"]')) {
       add('nav', '导航里有 /works/search、/tags、/collections 这类 AO3 路径', 1);
     }
+    // 以下几条在镜像站二次改版后依然保留，补进来提高"等镜像站"的召回
+    if (pick(doc, 'ul.primary.navigation, .primary.navigation, #header .navigation')) {
+      add('header-nav', '页头是 AO3 的 ul.primary.navigation 导航', 2);
+    }
+    if (pick(doc, 'ol.work.index, ol.bookmark.index, ol.collection.index, ol.series.index')) {
+      add('index-list', '列表页是 AO3 的 ol.work.index 结构', 2);
+    }
+    if (pick(doc, '#greeting')) add('greeting', '页头有 AO3 登录后的 #greeting 问候区', 1);
+    if (pick(doc, '#dashboard')) add('dashboard', '侧栏是 AO3 的 #dashboard 结构', 1);
+    const userLinks = pickAll(doc, 'a[href*="/users/"]');
+    raw.userLinks = userLinks.length;
+    if (userLinks.length >= 2) add('user-links', '作者/用户链接形如 /users/…（' + userLinks.length + ' 个）', 1);
 
     // 通用结构（泛用性高，权重最低）
     if (pick(doc, '#main')) add('main', '存在 #main 容器', 1);
@@ -125,6 +186,7 @@
   function detect(doc, loc) {
     const document_ = doc || (typeof document !== 'undefined' ? document : null);
     const location_ = loc || (typeof location !== 'undefined' ? location : null);
+    const pageHost = rawHostOf(location_ && location_.hostname);
     const host = hostOf(location_ && location_.hostname);
     const protocol = String((location_ && location_.protocol) || '');
 
@@ -140,6 +202,7 @@
       return item.weight > 0;
     });
     const hasWorkContent = page.raw.workItems > 0 || page.raw.numericWorkLinks > 0;
+    const challenge = challengeInfo(document_);
 
     let level = 'none';
     if (structural.length && score >= LEVELS.high) level = 'high';
@@ -151,8 +214,12 @@
       level: level,
       score: score,
       host: host,
+      // 真实 hostname（保留 www）：启用镜像时申请权限要用它，否则 www 站点会漏
+      pageHost: pageHost,
       protocol: protocol,
       hasWorkContent: hasWorkContent,
+      challenge: !!challenge,
+      challengeMarker: challenge ? challenge.marker : '',
       reasons: all,
       domainSignals: dSignals,
       pageSignals: page.signals,
@@ -165,6 +232,7 @@
     if (!result) return '未检测';
     if (result.level === 'high') return '高度确认是 AO3 站点';
     if (result.level === 'medium') return '很可能是 AO3 站点';
+    if (result.challenge) return '站点正在做访问验证，通过后会自动重新检测';
     if (result.level === 'low') return '有一些 AO3 特征，但证据不足';
     return '没有发现 AO3 特征';
   }
@@ -177,6 +245,8 @@
   root.AO3TM.detect = {
     LEVELS: LEVELS,
     hostOf: hostOf,
+    rawHostOf: rawHostOf,
+    challengeInfo: challengeInfo,
     domainSignals: domainSignals,
     pageSignals: pageSignals,
     detect: detect,

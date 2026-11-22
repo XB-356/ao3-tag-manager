@@ -36,17 +36,27 @@ const PRESET_MIRRORS = [
   'ao3mirror.com',
   'www.ao3mirror.com'
 ];
-const MATCHES = ['https://archiveofourown.org/*']
-  .concat(
-    PRESET_MIRRORS.map(function (host) {
-      return 'https://' + host + '/*';
-    })
-  )
-  .concat(
-    PRESET_MIRRORS.map(function (host) {
-      return 'http://' + host + '/*';
-    })
-  );
+
+/* 裸域与 www 都要写进 @match：镜像站常把 sbxz.org 跳到 www.sbxz.org，
+   只写一种时油猴在另一半域名上根本不执行脚本。 */
+const MATCH_HOSTS = [];
+['archiveofourown.org']
+  .concat(PRESET_MIRRORS.map(function (host) {
+    return host.replace(/^www\./, '');
+  }))
+  .forEach(function (host) {
+    [host, 'www.' + host].forEach(function (name) {
+      if (MATCH_HOSTS.indexOf(name) === -1) MATCH_HOSTS.push(name);
+    });
+  });
+
+const MATCHES = MATCH_HOSTS.map(function (host) {
+  return 'https://' + host + '/*';
+}).concat(
+  MATCH_HOSTS.map(function (host) {
+    return 'http://' + host + '/*';
+  })
+);
 
 const header = [
   '// ==UserScript==',

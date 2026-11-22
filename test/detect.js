@@ -268,7 +268,59 @@ check(
   { level: genericResult.level, score: genericResult.score }
 );
 
-/* --- 结论文案 --- */
+/* --- www 与非 www：真实 hostname 要单独带出来（申请权限要用它） --- */
+check(
+  'rawHostOf 保留 www，hostOf 剥掉',
+  D.rawHostOf('https://www.sbxz.org:443/works') === 'www.sbxz.org' && D.hostOf('https://www.sbxz.org:443/works') === 'sbxz.org',
+  { raw: D.rawHostOf('https://www.sbxz.org:443/works'), host: D.hostOf('https://www.sbxz.org:443/works') }
+);
+const wwwResult = D.detect(makeDoc(ao3Page), loc('www.sbxz.org'));
+check(
+  'detect 结果里同时给出裸域与真实 hostname',
+  wwwResult.host === 'sbxz.org' && wwwResult.pageHost === 'www.sbxz.org' && wwwResult.isAo3,
+  { host: wwwResult.host, pageHost: wwwResult.pageHost, level: wwwResult.level }
+);
+
+/* --- 访问验证 / 人机校验页：要说清楚"在验证"，而不是"不是 AO3" --- */
+const challengeDoc = makeDoc({ tag: 'html', children: [{ tag: 'body', children: [{ tag: 'div', class: 'card' }] }] });
+challengeDoc.title = '访问验证 | AO3 Mirror';
+const challengeResult = D.detect(challengeDoc, loc('sbxz.org'));
+check(
+  '挑战页：不算 AO3，但标记出 challenge',
+  challengeResult.isAo3 === false && challengeResult.challenge === true && /访问验证/.test(challengeResult.challengeMarker),
+  { level: challengeResult.level, challenge: challengeResult.challenge, marker: challengeResult.challengeMarker }
+);
+check(
+  '挑战页的结论文案提示"正在访问验证"',
+  D.summary(challengeResult).indexOf('访问验证') !== -1,
+  D.summary(challengeResult)
+);
+check('普通空页面不会被误判成挑战页', D.detect(makeDoc(emptyPage), loc('example.com')).challenge === false);
+check('challengeInfo 对空 document 返回 null', D.challengeInfo(null) === null);
+
+/* --- 镜像站二次改版：没有 blurb，但 AO3 导航/列表结构还在，也要能认 --- */
+const mirrorNoBlurb = {
+  tag: 'html',
+  children: [
+    {
+      tag: 'body',
+      children: [
+        {
+          tag: 'div',
+          attrs: { id: 'header' },
+          children: [{ tag: 'ul', class: 'primary navigation', children: [{ tag: 'li' }] }]
+        },
+        { tag: 'div', attrs: { id: 'main' }, children: [{ tag: 'div', class: 'region' }] }
+      ]
+    }
+  ]
+};
+const mirrorNoBlurbResult = D.detect(makeDoc(mirrorNoBlurb), loc('mirror.example'));
+check(
+  '没有作品列表项、但有 AO3 导航结构：仍判为 AO3（镜像站改版场景）',
+  mirrorNoBlurbResult.isAo3 === true,
+  { level: mirrorNoBlurbResult.level, score: mirrorNoBlurbResult.score, reasons: mirrorNoBlurbResult.reasons.map((r) => r.key) }
+);
 check('结论文案随置信度变化', D.summary(ao3Result).indexOf('高度确认') === 0 && D.summary(genericResult).indexOf('特征') !== -1, {
   high: D.summary(ao3Result),
   low: D.summary(genericResult)

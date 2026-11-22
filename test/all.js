@@ -11,7 +11,7 @@ const NODE = process.execPath;
 // 纯单元测试（快，不需要浏览器）
 const UNIT = [
   'i18n.js', 'i18n-guard.js', 'i18n-the.js', 'i18n-homograph.js',
-  'author-parse.js', 'detect.js', 'parse-tags.js'
+  'author-parse.js', 'detect.js', 'env-hosts.js', 'mirror-scan.js', 'parse-tags.js'
 ];
 // 真实浏览器测试（每个都要先清掉遗留的 headless Chrome，避免相互干扰）
 const BROWSER = [

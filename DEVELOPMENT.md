@@ -70,7 +70,9 @@ node test/all.js       # 全量跑，逐文件报通过数，任一失败即非�
 | `test/run.js` | 主流程：屏蔽 / 只看 / 面板 / 右键 / 弹窗 / 规则编辑 | 71 |
 | `test/author-parse.js` | 作者名解析（含伪名与登录名） | 15 |
 | `test/parse-tags.js` | 标签解析 | 9 |
-| `test/detect.js` | 站点识别 | 17 |
+| `test/detect.js` | 站点识别（含 www 归一、访问验证页、镜像改版） | 24 |
+| `test/env-hosts.js` | 域名归一化与 match pattern（www 双覆盖） | 21 |
+| `test/mirror-scan.js` | 「所有网站」扫描脚本的注册 / 注销 | 11 |
 | `test/detect-browser.js` | 自动检测横幅 / 忽略名单 / 油猴行为 | 10 |
 | `test/mirror-userscript.js` | 镜像域名 / 动态注册 / `file://` / 油猴版 | 22 |
 
@@ -107,6 +109,19 @@ node tools/audit-ui-areas.js <snapshot.html> [更多...]
 2. **"能翻"要同时算三条路径**（整段 lookup / 分段 compound / 内嵌 inline），
    否则 `Works (0)` 这种会被误报（它靠分段路径翻成「作品 (0)」）。
 
+### 镜像站排查工具
+
+用户报「某个镜像站认不出来」时，先用探针看清那个站**真实**长什么样，
+不要凭截图猜：
+
+```bash
+# 打开线上站点，等它在页面里跑完 detect()，打印判定结果 + 首屏 HTML
+node tools/probe-live.js https://sbxz.org/ 20
+```
+
+它会告诉你三件事：真实 hostname（跳转后的）、`detect()` 的分数与命中理由、
+以及是不是撞上了「访问验证」挑战页（`_shield` 那种首包没有 AO3 结构的页面）。
+
 ### 重新生成 README 效果图
 
 ```bash
@@ -131,13 +146,29 @@ node test/shoot-detect.js    # 自动检测横幅
 | `a.tag[href*="/works"]` 标签链接 ≥ 2 个 | 2 |
 | 作品链接形如 `/works/数字` | 2 |
 | AO3 的 `#footer` / `#header` 结构 | 2 |
+| 页头是 `ul.primary.navigation` / 列表页是 `ol.work.index` | 2 |
 | 导航含 `/works/search`、`/tags`、`/collections` | 1 |
-| 存在 `#main`、`.header.module`（较通用） | 1 |
+| 存在 `#main`、`.header.module`、`#greeting`、`#dashboard` | 1 |
+| 作者链接形如 `/users/…` ≥ 2 个 | 1 |
 | 域名带 ao3 / mirror 字样 | 1 |
 | **通用建站程序痕迹（WordPress 等）** | **−3 ~ −4** |
 
 判定门槛：**必须有结构证据**，且总分 ≥ 6 为「高度确认」、≥ 3 为「很可能」。
 只有域名像、页面没有 AO3 结构时**不会**判定为 AO3——蹭名字的站点很多。
+
+三个容易踩的坑（都在 `env-core.js` / `detect.js` / `mirrors.js` 里）：
+
+- **www 与非 www 是同一个站。** 很多镜像把 `sbxz.org` 301 到 `www.sbxz.org`；
+  注册 match pattern 时只写其中一种，内容脚本就不注入，表现是"这个镜像认不出来"。
+  所以 `normalizeHost()` 统一剥 www，`hostToMatchPatterns()` 同时给出裸域与 www
+  （各 http/https，共 4 条），`isAo3Host()` 双向兼容。
+- **鉴别不出 ≠ 不是 AO3。** 部分镜像先返回一张「访问验证」挑战页（`_shield` 之类），
+  首包完全没有 AO3 结构。`detect()` 会返回 `challenge: true`，
+  `auto-detect.js` 的 `watchForLateAo3()` 会在 45 秒窗口里盯着 DOM，验证过后自动重判。
+- **「所有网站」权限 ≠ 自动注入。** 内容脚本能注入哪些站点由 manifest 的 `matches`
+  决定，权限本身不会让陌生站点跑脚本。开启自动检测后 `mirrors.js` 会额外注册一个
+  轻量扫描脚本 `ao3tm-scan`（只含 `env-core` / `env` / `detect` / `auto-detect`，
+  matches 为 `*://*/*`），撤销权限时注销；只靠这一条，未知镜像才可能被自动发现。
 
 ---
 

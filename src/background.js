@@ -19,7 +19,13 @@ const MENU = {
 };
 
 const STORAGE_KEY = 'ao3tm_state_v1';
-const STATIC_PATTERNS = ['https://archiveofourown.org/*', 'http://127.0.0.1/*', 'http://localhost/*', 'file:///*'];
+const STATIC_PATTERNS = [
+  'https://archiveofourown.org/*',
+  'https://www.archiveofourown.org/*',
+  'http://127.0.0.1/*',
+  'http://localhost/*',
+  'file:///*'
+];
 
 /* -------------------------------- 右键菜单 -------------------------------- */
 async function menuPatterns() {
@@ -119,6 +125,19 @@ chrome.runtime.onStartup.addListener(function () {
   syncMirrors();
 });
 
+/* 权限是被授予/撤销时才变化的：<all_urls> 决定要不要挂轻量扫描脚本，
+   所以这里必须跟着重新同步一次，否则"刚开启自动检测"要等下次启动才生效。 */
+if (chrome.permissions && chrome.permissions.onAdded) {
+  chrome.permissions.onAdded.addListener(function () {
+    syncMirrors();
+  });
+}
+if (chrome.permissions && chrome.permissions.onRemoved) {
+  chrome.permissions.onRemoved.addListener(function () {
+    syncMirrors();
+  });
+}
+
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (!message || typeof message.type !== 'string') return undefined;
   if (message.type === 'ao3tm:save-mirror') {
@@ -151,20 +170,23 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   }
   if (message.type === 'ao3tm:mirror-debug') {
     // 给自动化测试用：回报动态注册的实际内容
+    const mod = self.AO3TM && self.AO3TM.mirrors ? self.AO3TM.mirrors : null;
+    const ids = [mod ? mod.SCRIPT_ID : 'ao3tm-mirror'];
+    if (mod && mod.SCAN_ID) ids.push(mod.SCAN_ID);
     Promise.all([READY, new Promise(function (resolve) {
-      chrome.scripting.getRegisteredContentScripts({ ids: [self.AO3TM && self.AO3TM.mirrors ? self.AO3TM.mirrors.SCRIPT_ID : 'ao3tm-mirror'] }, function (scripts) {
+      chrome.scripting.getRegisteredContentScripts({ ids: ids }, function (scripts) {
         void chrome.runtime.lastError;
         resolve(scripts || []);
       });
     })]).then(function (results) {
-      const mod = results[0];
+      const modules = results[0];
       const scripts = results[1];
       sendResponse({
         ok: true,
         registered: scripts.map(function (s) {
           return { id: s.id, matches: s.matches, js: s.js.length, persist: s.persistAcrossSessions };
         }),
-        enabled: mod && mod.mirrors ? 'pending' : null
+        enabled: modules && modules.mirrors ? 'pending' : null
       });
     });
     return true;
