@@ -29,7 +29,8 @@
       indicator = document.createElement('div');
       indicator.id = 'ao3tm-focus';
       indicator.className = 'ao3tm-focus';
-      document.body.appendChild(indicator);
+      /* 挂到 <html>：body 上若有 invert 滤镜会建立包含块，fixed 定位会失准 */
+      (document.documentElement || document.body).appendChild(indicator);
     }
     indicator.innerHTML =
       '临时聚焦：<b>' +
@@ -69,7 +70,7 @@
         const key = event.key.toLowerCase();
         if (key === 'b' || key === 'f') {
           event.preventDefault();
-          if (key === 'b' && root.AO3TM.panel) root.AO3TM.panel.open(document.body);
+          if (key === 'b' && root.AO3TM.panel) root.AO3TM.panel.open(document.documentElement || document.body);
           if (key === 'f') {
             const term = currentKeyword();
             setFocus(focusFilter.active ? '' : term);

@@ -1302,13 +1302,34 @@ async function main() {
     })()`
   );
   await sleep(2400);
-  const invertedMark = await evaluate(`document.documentElement.getAttribute('data-ao3tm-inverted')`);
-  const fabFilter = await evaluate(`(() => { const f = document.getElementById('ao3tm-fab'); return f ? getComputedStyle(f).filter : ''; })()`);
+  const invState = await evaluate(`(() => {
+    const f = document.getElementById('ao3tm-fab');
+    const bar = document.querySelector('.ao3tm-bar');
+    return {
+      mark: document.documentElement.getAttribute('data-ao3tm-inverted'),
+      fabParent: f ? f.parentElement.tagName : null,
+      fabFilter: f ? getComputedStyle(f).filter : '',
+      barFilter: bar ? getComputedStyle(bar).filter : ''
+    };
+  })()`);
   record(
-    'body 上的反相深色：打上标记并给注入节点反向抵消',
-    invertedMark === '1' && /invert\(/.test(String(fabFilter)),
-    { invertedMark, fabFilter }
+    'body 上的反相深色：浮层挂到 html 上逃出滤镜，正文里的工具条反向抵消',
+    invState.mark === '1' && invState.fabParent === 'HTML' && invState.fabFilter === 'none' && /invert\(/.test(invState.barFilter),
+    invState
   );
+  /* body 上的 invert 会给祖先建立包含块，fixed 定位会算歪 —— 悬浮球必须仍在视口内 */
+  const fabRect = await evaluate(`(() => {
+    const f = document.getElementById('ao3tm-fab');
+    if (!f) return null;
+    const r = f.getBoundingClientRect();
+    return [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)];
+  })()`);
+  const fabInView =
+    !!fabRect &&
+    fabRect[2] > 0 &&
+    fabRect[1] >= 0 &&
+    fabRect[1] + fabRect[3] <= (await evaluate('window.innerHeight')) + 1;
+  record('body 有滤镜时悬浮球仍留在视口内（不被包含块顶出去）', fabInView, { fabRect });
   await evaluate(`(() => { const s = document.getElementById('ao3tm-test-invert'); if (s) s.remove(); return true; })()`);
 
   // 用户主动「收起」过就不再补，尊重这个选择

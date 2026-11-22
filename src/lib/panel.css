@@ -1006,17 +1006,12 @@ html[data-ao3tm-theme='dark'] .ao3tm-fab .ao3tm-fab-toggle.is-on {
   border-color: transparent;
 }
 
-/* 站点用 html { filter: invert(...) } 做深色模式时，我们的控件会被一起反相，
-   浅底白圆按钮在深色页面上就成了深底深字（看着像消失了）。
-   给注入的节点再反一次，把颜色抵消回来。 */
-html[data-ao3tm-inverted='1'] .ao3tm-fab,
+/* 站点用 invert 滤镜做深色模式时，留在 body 里的页内元素会被一起反相。
+   浮层（悬浮球 / 面板 / 提示条 / 菜单）已经挂到 <html> 上，跳出了滤镜，不能再反一次；
+   只有仍然待在正文里的工具条和卡片按钮需要抵消。 */
 html[data-ao3tm-inverted='1'] .ao3tm-bar,
-html[data-ao3tm-inverted='1'] .ao3tm-tools,
-html[data-ao3tm-inverted='1'] .ao3tm-menu,
-html[data-ao3tm-inverted='1'] .ao3tm-panel-root,
-html[data-ao3tm-inverted='1'] .ao3tm-toast {
+html[data-ao3tm-inverted='1'] .ao3tm-tools {
   filter: invert(1) hue-rotate(180deg);
-  /* 反相后阴影方向仍合理；同时保证不受页面 transform/filter 影响层级 */
   isolation: isolate;
 }
 

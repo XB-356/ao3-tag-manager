@@ -40,6 +40,16 @@
     return D.pathOf(el);
   }
 
+  /* 注入的浮层统一挂到 <html> 而不是 <body>：有些站点/镜像用 body 上的
+     filter: invert(...) 做深色模式，而滤镜会给祖先建立包含块，
+     导致 position: fixed 不再相对视口定位（悬浮球会被顶到视口外）。
+     挂到 html 上就跳出那层滤镜，位置和配色都正常。 */
+  function mountRoot(node) {
+    const host = document.documentElement || document.body;
+    host.appendChild(node);
+    return node;
+  }
+
   /* ---------------------------------- 提示条 -------------------------------- */
 
   let toastTimer = null;
@@ -51,7 +61,7 @@
       node = document.createElement('div');
       node.id = NS + '-toast';
       node.className = NS + '-toast';
-      document.body.appendChild(node);
+      mountRoot(node);
     }
     node.innerHTML =
       '<span class="ao3tm-toast-text">' +
@@ -367,7 +377,7 @@
       icon('cog') +
       '规则设置</button></div>';
 
-    document.body.appendChild(menu);
+    mountRoot(menu);
     const menuRect = menu.getBoundingClientRect();
     const viewW = document.documentElement.clientWidth;
     const viewH = document.documentElement.clientHeight;
@@ -617,7 +627,7 @@
       '<button type="button" class="ao3tm-fab-main" title="AO3 标签管家：规则设置">' + icon('dash') + '</button>' +
       '<button type="button" class="ao3tm-fab-toggle" title="临时显示本页被隐藏的作品">' + icon('eye') + '</button>' +
       '<button type="button" class="ao3tm-fab-sub" title="收起悬浮按钮">' + icon('close') + '</button>';
-    document.body.appendChild(fab);
+    mountRoot(fab);
     const buttons = fab.querySelectorAll('button');
     buttons[0].addEventListener('click', function () {
       openPanel();
@@ -662,6 +672,19 @@
     injectFab();
   }
 
+  /* 兜底：如果页面用 html 上的滤镜给祖先建了包含块（极少见），fixed 会算歪，
+     悬浮球可能落在视口外。发现不在可视区就改用绝对定位并按滚动量摆好。 */
+  function keepFabInView() {
+    const fab = document.getElementById(NS + '-fab');
+    if (!fab || fab.style.position === 'absolute') return;
+    const rect = fab.getBoundingClientRect();
+    const outside = rect.bottom < 0 || rect.top > window.innerHeight || rect.right < 0 || rect.left > window.innerWidth;
+    if (!outside) return;
+    fab.style.position = 'absolute';
+    fab.style.bottom = 'auto';
+    fab.style.top = window.scrollY + window.innerHeight - 52 + 'px';
+  }
+
   /** 悬浮按钮的"临时显示"状态同步：图标与提示随状态变化 */
   function updateFab(toggleBtn) {
     const btn = toggleBtn || document.querySelector('.' + NS + '-fab-toggle');
@@ -682,7 +705,7 @@
   /* ---------------------------------- 面板 --------------------------------- */
 
   function openPanel() {
-    if (root.AO3TM.panel) root.AO3TM.panel.open(document.body);
+    if (root.AO3TM.panel) root.AO3TM.panel.open(document.documentElement || document.body);
   }
 
   /* ---------------------------------- 调度 --------------------------------- */
@@ -701,6 +724,7 @@
       try {
         run();
         ensureFab();
+        keepFabInView();
       } catch (err) {
         console.error('[AO3 标签管家] 刷新出错', err);
       }
@@ -1039,7 +1063,7 @@
       icon('cog') +
       '规则设置</button></div>';
 
-    document.body.appendChild(menu);
+    mountRoot(menu);
     const menuRect = menu.getBoundingClientRect();
     const viewW = document.documentElement.clientWidth;
     const viewH = document.documentElement.clientHeight;
@@ -1303,7 +1327,10 @@
         }
       });
       if (relevant) refresh();
-      if (oursGone) ensureFab();
+      if (oursGone) {
+        ensureFab();
+        keepFabInView();
+      }
     });
     /* 观察 documentElement 而不是 body：镜像站切主题时可能连 body 一起替换，
        只盯 body 的话观察器会跟着那个被丢弃的节点一起失效。 */
@@ -1314,6 +1341,7 @@
     store.ready().then(function () {
       run();
       injectFab();
+      keepFabInView();
       watch();
       document.addEventListener('click', function (event) {
         if (!event.target.closest('.' + NS + '-menu, .ao3tm-tool-menu')) closeMenus();

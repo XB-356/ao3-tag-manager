@@ -34,7 +34,7 @@
       return true;
     }
     if (message.type === 'ao3tm:panel') {
-      if (root.AO3TM.panel) root.AO3TM.panel.open(document.body);
+      if (root.AO3TM.panel) root.AO3TM.panel.open(document.documentElement || document.body);
       sendResponse({ ok: true });
       return true;
     }
