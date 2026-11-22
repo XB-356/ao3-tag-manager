@@ -980,6 +980,32 @@ a.ao3tm-tag-only {
   color: #fff;
 }
 
+/* 深色页面上不能再用深色球：底色只有 #23 左右的深灰，跟页面糊成一片。
+   悬浮球是入口，改成强调色的球 + 深色图标，深浅两种页面都看得见。 */
+html[data-ao3tm-theme='dark'] .ao3tm-fab button {
+  background: var(--ao3tm-accent);
+  color: #1b1b1b;
+  border-color: transparent;
+  opacity: 0.9;
+}
+
+html[data-ao3tm-theme='dark'] .ao3tm-fab button:hover {
+  opacity: 1;
+  color: #1b1b1b;
+  background: var(--ao3tm-accent-soft);
+}
+
+html[data-ao3tm-theme='dark'] .ao3tm-fab .ao3tm-fab-sub {
+  opacity: 0.7;
+}
+
+/* 深色下"临时显示已开启"用白球区分，否则和常态的强调色球一样，看不出开关状态 */
+html[data-ao3tm-theme='dark'] .ao3tm-fab .ao3tm-fab-toggle.is-on {
+  background: #f2f2f2;
+  color: var(--ao3tm-accent);
+  border-color: transparent;
+}
+
 /* 站点用 html { filter: invert(...) } 做深色模式时，我们的控件会被一起反相，
    浅底白圆按钮在深色页面上就成了深底深字（看着像消失了）。
    给注入的节点再反一次，把颜色抵消回来。 */

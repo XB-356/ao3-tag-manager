@@ -1268,6 +1268,20 @@ async function main() {
     !!nightRatios && nightRatios.panel >= 4.5 && nightRatios.textarea >= 4.5 && panelBgIsDark,
     { ratios: nightRatios, colors: nightStyle, panelBgIsDark: panelBgIsDark }
   );
+  /* 深色页面上悬浮球曾经是深灰球压深灰底，用户反馈"消失了" */
+  const fabStyle = await evaluate(`(() => {
+    const b = document.querySelector('#ao3tm-fab button');
+    if (!b) return null;
+    const cs = getComputedStyle(b);
+    return { bg: cs.backgroundColor, color: cs.color, page: getComputedStyle(document.body).backgroundColor };
+  })()`);
+  const fabIconContrast = fabStyle ? Number(contrastOk({ bg: fabStyle.bg, color: fabStyle.color }).toFixed(2)) : 0;
+  const fabPageContrast = fabStyle ? Number(contrastOk({ bg: fabStyle.bg, color: fabStyle.page }).toFixed(2)) : 0;
+  record(
+    '深色页面：悬浮球与页面底色可区分，图标清晰',
+    !!fabStyle && fabPageContrast >= 1.6 && fabIconContrast >= 3,
+    { fabStyle, fabIconContrast, fabPageContrast }
+  );
   await evaluate(`document.querySelector('.ao3tm-panel-root [data-act="close"]').click()`);
   await evaluate(`(() => { const s = document.getElementById('ao3tm-test-dark'); if (s) s.remove(); return true; })()`);
 
